@@ -25,7 +25,8 @@ export default function Login() {
 
     //redirect if user is authenticated 
     useEffect(()=>{
-        if(isAuthenticated){
+       if (isAuthenticated && localStorage.getItem('token')) {
+
             navigate('/dashboard')
         }
     },[isAuthenticated,navigate])

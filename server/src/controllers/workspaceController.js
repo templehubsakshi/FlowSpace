@@ -324,9 +324,48 @@ exports.deleteWorkspace = async (req, res) => {
 };
 
 // Invite member to workspace (admin only)
+// exports.inviteMember = async (req, res) => {
+//   try {
+//     const { email, role = 'member' } = req.body;
+//     const workspace = req.workspace;
+
+//     // Find user by email
+//     const user = await User.findOne({ email });
+//     if (!user) {
+//       return res.status(404).json({ message: 'User not found with this email' });
+//     }
+
+//     // Check if already a member
+//     const alreadyMember = workspace.members.some(
+//       m => m.user.toString() === user._id.toString()
+//     );
+
+//     if (alreadyMember) {
+//       return res.status(400).json({ message: 'User is already a member' });
+//     }
+
+//     // Add member
+//     workspace.members.push({
+//       user: user._id,
+//       role
+//     });
+
+//     await workspace.save();
+//     await workspace.populate('members.user', 'name email');
+
+//     res.json({
+//       success: true,
+//       message: `${user.name} added to workspace`,
+//       workspace
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+// Invite member to workspace (admin only)
 exports.inviteMember = async (req, res) => {
   try {
-    const { email, role = 'member' } = req.body;
+    const { email, role } = req.body; // role optional
     const workspace = req.workspace;
 
     // Find user by email
@@ -339,15 +378,20 @@ exports.inviteMember = async (req, res) => {
     const alreadyMember = workspace.members.some(
       m => m.user.toString() === user._id.toString()
     );
-
     if (alreadyMember) {
       return res.status(400).json({ message: 'User is already a member' });
+    }
+
+    // Safe role assignment: owner cannot be assigned
+    let newRole = 'member'; // default
+    if (role && role.toLowerCase() === 'admin') {
+      newRole = 'admin';
     }
 
     // Add member
     workspace.members.push({
       user: user._id,
-      role
+      role: newRole
     });
 
     await workspace.save();
@@ -355,13 +399,14 @@ exports.inviteMember = async (req, res) => {
 
     res.json({
       success: true,
-      message: `${user.name} added to workspace`,
+      message: `${user.name} added to workspace as ${newRole}`,
       workspace
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // Remove member from workspace (admin only)
 exports.removeMember = async (req, res) => {

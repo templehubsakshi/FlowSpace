@@ -33,9 +33,16 @@ function App() {
   const { isAuthenticated } = useSelector((state) => state.auth);
 
   // Check if user is logged in on app load
-  useEffect(() => {
+  // useEffect(() => {
+  //   dispatch(checkAuth());
+  // }, [dispatch]);
+useEffect(() => {
+  const token = localStorage.getItem("token");
+
+  if (token) {
     dispatch(checkAuth());
-  }, [dispatch]);
+  }
+}, [dispatch]);
 
   return (
     <BrowserRouter>

@@ -1,17 +1,32 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { Provider } from 'react-redux'
-import store from './redux/store'
-import App from './App.jsx'
-import ErrorBoundary from './components/ErrorBoundary' // ADD
-import './index.css'
+// client/src/main.jsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { Provider } from 'react-redux';
+// import { BrowserRouter } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import App from './App';
+import store from './redux/store';
+import { SocketProvider } from './context/SocketContext'; // Socket context
+import ErrorBoundary from './components/ErrorBoundary'; // Error boundary
+import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <ErrorBoundary>  {/* ADD */}
+    {/* Catch any runtime errors in the whole app */}
+    <ErrorBoundary>
+      {/* Provide Redux store */}
       <Provider store={store}>
-        <App />
+        {/* Provide React Router */}
+
+          {/* Provide Socket context */}
+          <SocketProvider>
+            {/* Main App */}
+            <App />
+            {/* Global toast notifications */}
+            <Toaster position="top-right" />
+          </SocketProvider>
+      
       </Provider>
-    </ErrorBoundary>  {/* ADD */}
-  </React.StrictMode>,
-)
+    </ErrorBoundary>
+  </React.StrictMode>
+);

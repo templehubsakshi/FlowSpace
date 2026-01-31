@@ -1,6 +1,7 @@
+import { useWorkspaceSocket } from '../hooks/useWorkspaceSocket';
 import SearchBar from './SearchBar';
 import FilterPanel from './FilterPanel';
-import { useEffect, useState, useMemo, useCallback ,lazy,Suspense} from 'react';
+import { useEffect, useState, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   DndContext,
@@ -17,20 +18,22 @@ import {
   optimisticMoveTask,
   moveTask,
   rollbackMoveTask,
-  setSelectedTask
+  setSelectedTask,
+  deleteTask
 } from '../redux/slices/taskSlice';
 import KanbanColumn from './KanbanColumn';
 import TaskCard from './TaskCard';
-// import CreateTaskModal from './CreateTaskModal';
-// import TaskDetailModal from './TaskDetailModal';
 import toast from 'react-hot-toast';
-import { X } from 'lucide-react';
 
+const CreateTaskModal = lazy(() => import('./CreateTaskModal'));
+const TaskDetailModal = lazy(() => import('./TaskDetailModal'));
 
 export default function KanbanBoard() {
   const dispatch = useDispatch();
 
   const { currentWorkspace } = useSelector((state) => state.workspace);
+  const workspaceId = currentWorkspace?._id;
+  const { socket, isConnected } = useWorkspaceSocket(workspaceId);
   const { tasks, isLoading, selectedTask } = useSelector((state) => state.tasks);
 
   const [activeTask, setActiveTask] = useState(null);
@@ -48,8 +51,6 @@ export default function KanbanBoard() {
     useSensor(KeyboardSensor),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
   );
-  const CreateTaskModal = lazy(() => import('./CreateTaskModal'));
-const TaskDetailModal = lazy(() => import('./TaskDetailModal'));
 
   useEffect(() => {
     if (currentWorkspace) {
@@ -147,6 +148,16 @@ const TaskDetailModal = lazy(() => import('./TaskDetailModal'));
       .then(res => {
         if (res.type.includes('fulfilled')) {
           toast.success('Task moved!', { id: taskId });
+
+          if (socket && isConnected) {
+            socket.emit('task:move', {
+              workspaceId,
+              taskId,
+              newStatus: destinationStatus,
+              oldStatus: sourceStatus,
+              newOrder: destinationIndex
+            });
+          }
         } else {
           toast.error('Move failed', { id: taskId });
           dispatch(rollbackMoveTask({
@@ -157,7 +168,7 @@ const TaskDetailModal = lazy(() => import('./TaskDetailModal'));
           }));
         }
       });
-  }, [tasks, dispatch]);
+  }, [tasks, dispatch, socket, isConnected, workspaceId]);
 
   const handleTaskClick = useCallback((task) => {
     dispatch(setSelectedTask(task));
@@ -177,6 +188,23 @@ const TaskDetailModal = lazy(() => import('./TaskDetailModal'));
     setSearchQuery('');
   }, []);
 
+  const handleDeleteTask = useCallback(async (taskId) => {
+    const result = await dispatch(deleteTask(taskId));
+
+    if (result.type === 'tasks/delete/fulfilled') {
+      if (socket && isConnected) {
+        socket.emit('task:delete', {
+          workspaceId,
+          taskId
+        });
+      }
+
+      toast.success('Task deleted successfully', { icon: '🗑️' });
+    } else {
+      toast.error(result.payload || 'Failed to delete task');
+    }
+  }, [dispatch, socket, isConnected, workspaceId]);
+
   if (!currentWorkspace) {
     return <div className="flex items-center justify-center h-full">Select a workspace</div>;
   }
@@ -187,6 +215,15 @@ const TaskDetailModal = lazy(() => import('./TaskDetailModal'));
 
   return (
     <>
+      <div className="flex items-center gap-2 mb-4">
+        <div className={`w-2 h-2 rounded-full ${
+          isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+        }`} />
+        <span className="text-sm text-gray-500">
+          {isConnected ? 'Live updates active' : 'Reconnecting...'}
+        </span>
+      </div>
+
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
         <SearchBar value={searchQuery} onChange={setSearchQuery} />
         <FilterPanel
@@ -196,124 +233,77 @@ const TaskDetailModal = lazy(() => import('./TaskDetailModal'));
         />
       </div>
 
-     <DndContext
-  sensors={sensors}
-  collisionDetection={closestCorners}
-  onDragStart={handleDragStart}
-  // onDragOver={handleDragOver}
-  onDragEnd={handleDragEnd}
->
-  {/* Mobile: Horizontal Scroll */}
-  <div className="lg:hidden flex gap-4 overflow-x-auto pb-4 h-full">
-    <div className="min-w-70 sm:min-w-[320px]">
-      <KanbanColumn
-        status="todo"
-        title="To Do"
-        tasks={filteredTasks.todo}
-        onTaskClick={handleTaskClick}
-        onAddTask={() => handleAddTask('todo')}
-        isLoading={isLoading}
-      />
-    </div>
-    
-    <div className="min-w-70 sm:min-w-[320px]">
-      <KanbanColumn
-        status="in_progress"
-        title="In Progress"
-        tasks={filteredTasks.in_progress}
-        onTaskClick={handleTaskClick}
-        onAddTask={() => handleAddTask('in_progress')}
-        isLoading={isLoading}
-      />
-    </div>
-    
-    <div className="min-w-70 sm:min-w-[320px]">
-      <KanbanColumn
-        status="done"
-        title="Done"
-        tasks={filteredTasks.done}
-        onTaskClick={handleTaskClick}
-        onAddTask={() => handleAddTask('done')}
-        isLoading={isLoading}
-      />
-    </div>
-  </div>
-
-  {/* Desktop: Grid */}
-  <div className="hidden lg:grid grid-cols-3 gap-6 h-full">
-    <KanbanColumn
-      status="todo"
-      title="To Do"
-      tasks={filteredTasks.todo}
-      onTaskClick={handleTaskClick}
-      onAddTask={() => handleAddTask('todo')}
-      isLoading={isLoading}
-    />
-    
-    <KanbanColumn
-      status="in_progress"
-      title="In Progress"
-      tasks={filteredTasks.in_progress}
-      onTaskClick={handleTaskClick}
-      onAddTask={() => handleAddTask('in_progress')}
-      isLoading={isLoading}
-    />
-    
-    <KanbanColumn
-      status="done"
-      title="Done"
-      tasks={filteredTasks.done}
-      onTaskClick={handleTaskClick}
-      onAddTask={() => handleAddTask('done')}
-      isLoading={isLoading}
-    />
-  </div>
-
-  {/* Drag Overlay */}
-  <DragOverlay>
-    {activeTask ? (
-      <div 
-        className="rotate-3 scale-105 cursor-grabbing"
-        style={{
-          opacity: 0.9,
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)'
-        }}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
       >
-        <TaskCard task={activeTask} />
-      </div>
-    ) : null}
-  </DragOverlay>
-</DndContext>
-{/* 
-      {showCreateModal && (
-        <CreateTaskModal
-          initialStatus={createModalStatus}
-          onClose={() => setShowCreateModal(false)}
-        />
-      )} */}
+        {/* Desktop Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+          <KanbanColumn
+            status="todo"
+            title="To Do"
+            tasks={filteredTasks.todo}
+            onTaskClick={handleTaskClick}
+            onAddTask={() => handleAddTask('todo')}
+            onDeleteTask={handleDeleteTask}
+            workspaceId={workspaceId}
+          />
 
-      {selectedTask && (
-        <TaskDetailModal
-          task={selectedTask}
-          onClose={() => dispatch(setSelectedTask(null))}
-        />
-      )}
-      {/* Modals with Suspense */}
-<Suspense fallback={null}>
-  {showCreateModal && (
-    <CreateTaskModal
-      initialStatus={createModalStatus}
-      onClose={() => setShowCreateModal(false)}
-    />
-  )}
+          <KanbanColumn
+            status="in_progress"
+            title="In Progress"
+            tasks={filteredTasks.in_progress}
+            onTaskClick={handleTaskClick}
+            onAddTask={() => handleAddTask('in_progress')}
+            onDeleteTask={handleDeleteTask}
+            workspaceId={workspaceId}
+          />
 
-  {selectedTask && (
-    <TaskDetailModal
-      task={selectedTask}
-      onClose={() => dispatch(setSelectedTask(null))}
-    />
-  )}
-</Suspense>
+          <KanbanColumn
+            status="done"
+            title="Done"
+            tasks={filteredTasks.done}
+            onTaskClick={handleTaskClick}
+            onAddTask={() => handleAddTask('done')}
+            onDeleteTask={handleDeleteTask}
+            workspaceId={workspaceId}
+          />
+        </div>
+
+        {/* Drag Overlay */}
+        <DragOverlay>
+          {activeTask ? (
+            <div 
+              className="rotate-3 scale-105 cursor-grabbing"
+              style={{
+                opacity: 0.9,
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)'
+              }}
+            >
+              <TaskCard task={activeTask} />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      {/* Modals */}
+      <Suspense fallback={null}>
+        {showCreateModal && (
+          <CreateTaskModal
+            initialStatus={createModalStatus}
+            onClose={() => setShowCreateModal(false)}
+          />
+        )}
+
+        {selectedTask && (
+          <TaskDetailModal
+            task={selectedTask}
+            onClose={() => dispatch(setSelectedTask(null))}
+          />
+        )}
+      </Suspense>
     </>
   );
 }

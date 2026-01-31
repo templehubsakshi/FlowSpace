@@ -10,7 +10,9 @@ export default function KanbanColumn({
   color,
   onTaskClick,
   onAddTask,
-  dropIndicatorClass = ''  // Optional class for drop indicator styling
+  onDeleteTask,
+  workspaceId,
+  dropIndicatorClass = ''
 }) {
   const { setNodeRef } = useDroppable({ id: status });
 
@@ -38,7 +40,7 @@ export default function KanbanColumn({
           <div className="flex items-center gap-3">
             <h2 
               className="font-bold text-lg" 
-              id={`${status}-heading`}  // Accessibility: label tasks list
+              id={`${status}-heading`}
             >
               {title}
             </h2>
@@ -79,6 +81,8 @@ export default function KanbanColumn({
                 key={task._id}
                 task={task}
                 onClick={() => onTaskClick(task)}
+                onDelete={onDeleteTask}
+                workspaceId={workspaceId}
               />
             ))
           ) : (

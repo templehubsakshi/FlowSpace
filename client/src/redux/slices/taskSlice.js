@@ -116,6 +116,54 @@ const taskSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    
+    // ✅ NEW: Add task from socket (no API call)
+    addTaskFromSocket: (state, action) => {
+      const task = action.payload;
+      // Add to correct status column
+      if (state.tasks[task.status]) {
+        state.tasks[task.status].unshift(task);
+      }
+    },
+    
+    // ✅ NEW: Update task from socket (no API call)
+    updateTaskFromSocket: (state, action) => {
+      const updatedTask = action.payload;
+      
+      // Find and update task in correct status array
+      Object.keys(state.tasks).forEach(status => {
+        const index = state.tasks[status].findIndex(t => t._id === updatedTask._id);
+        if (index !== -1) {
+          // If status changed, move to new column
+          if (state.tasks[status][index].status !== updatedTask.status) {
+            state.tasks[status].splice(index, 1);
+            state.tasks[updatedTask.status].unshift(updatedTask);
+          } else {
+            state.tasks[status][index] = updatedTask;
+          }
+        }
+      });
+
+      // Update selected task if it's the one being updated
+      if (state.selectedTask?._id === updatedTask._id) {
+        state.selectedTask = updatedTask;
+      }
+    },
+    
+    // ✅ NEW: Delete task from socket (no API call)
+    deleteTaskFromSocket: (state, action) => {
+      const taskId = action.payload;
+      
+      // Remove from all status arrays
+      Object.keys(state.tasks).forEach(status => {
+        state.tasks[status] = state.tasks[status].filter(t => t._id !== taskId);
+      });
+
+      if (state.selectedTask?._id === taskId) {
+        state.selectedTask = null;
+      }
+    },
+    
     // Optimistic update for drag-and-drop
     optimisticMoveTask: (state, action) => {
       const { taskId, sourceStatus, destinationStatus, sourceIndex, destinationIndex } = action.payload;
@@ -133,6 +181,7 @@ const taskSlice = createSlice({
       // Add to destination column at specific position
       state.tasks[destinationStatus].splice(destinationIndex, 0, taskToMove);
     },
+    
     // Rollback failed move
     rollbackMoveTask: (state, action) => {
       const { taskId, sourceStatus, destinationStatus, sourceIndex } = action.payload;
@@ -273,7 +322,10 @@ export const {
   setSelectedTask, 
   clearError, 
   optimisticMoveTask,
-  rollbackMoveTask  // ← NEW: Export rollback action
+  rollbackMoveTask,
+  addTaskFromSocket,      // ✅ NEW: Export socket actions
+  updateTaskFromSocket,   // ✅ NEW
+  deleteTaskFromSocket    // ✅ NEW
 } = taskSlice.actions;
 
 export default taskSlice.reducer;

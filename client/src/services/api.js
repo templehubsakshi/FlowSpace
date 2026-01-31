@@ -1,5 +1,8 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
+// import store from '../redux/store'
+// import { logout } from '../redux/slices/authSlice'
+
 
 const api = axios.create({
   baseURL: 'http://localhost:5000/api',
@@ -39,13 +42,26 @@ api.interceptors.response.use(
         toast.error(message || 'Invalid request', { id: 'error-400' });
         break;
       
-      case 401:
-        toast.error('Session expired. Please login again.', { id: 'error-401' });
-        // Redirect to login after short delay
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 1500);
-        break;
+ case 401:
+  toast.error('Session expired. Please login again.', { id: 'error-401' });
+
+  // 🔥 Clear storage
+  localStorage.removeItem('user');
+  localStorage.removeItem('token');
+
+  // 🔥 Notify app about logout
+  window.dispatchEvent(new Event("force-logout"));
+
+  if (!window.__isRedirecting) {
+    window.__isRedirecting = true;
+    setTimeout(() => {
+      window.location.href = '/login';
+    }, 500);
+  }
+  break;
+
+
+
       
       case 403:
         toast.error('You don\'t have permission to perform this action', { 
@@ -77,7 +93,7 @@ api.interceptors.response.use(undefined, async (error) => {
   const config = error.config;
 
   // Don't retry if already retried or if it's not a network error
-  if (!config || config.__retryCount >= 2 || error.response) {
+  if (!config || config.__retryCount >= 2 || error.response?.status === 401) {
     return Promise.reject(error);
   }
 

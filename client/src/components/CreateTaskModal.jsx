@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createTask } from '../redux/slices/taskSlice';
+import { useSocket } from '../context/SocketContext'; // ✅ ADD THIS
 import toast from 'react-hot-toast';
 import { X, Plus, Calendar, Tag, User, AlertCircle } from 'lucide-react';
 
 export default function CreateTaskModal({ initialStatus = 'todo', onClose }) {
   const dispatch = useDispatch();
   const { currentWorkspace } = useSelector((state) => state.workspace);
+  const { socket } = useSocket(); // ✅ GET SOCKET INSTANCE
   const [isLoading, setIsLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -27,65 +29,74 @@ export default function CreateTaskModal({ initialStatus = 'todo', onClose }) {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!formData.title.trim()) {
-    toast.error('Task title is required');
-    return;
-  }
+    if (!formData.title.trim()) {
+      toast.error('Task title is required');
+      return;
+    }
 
-  setIsLoading(true);
+    setIsLoading(true);
 
-  // Prepare task data
-  const taskData = {
-    title: formData.title,
-    description: formData.description,
-    status: formData.status,
-    priority: formData.priority,
-    workspaceId: currentWorkspace._id,
-    tags: formData.tags ? formData.tags.split(',').map(t => t.trim()) : []
+    const taskData = {
+      title: formData.title,
+      description: formData.description,
+      status: formData.status,
+      priority: formData.priority,
+      workspaceId: currentWorkspace._id,
+      tags: formData.tags
+        ? formData.tags.split(',').map(t => t.trim())
+        : []
+    };
+
+    if (formData.assignee) {
+      taskData.assignee = formData.assignee;
+    }
+
+    if (formData.dueDate) {
+      taskData.dueDate = formData.dueDate;
+    }
+
+    const result = await dispatch(createTask(taskData));
+
+    setIsLoading(false);
+
+    if (result.type === 'tasks/create/fulfilled') {
+      // ✅ EMIT SOCKET EVENT TO NOTIFY OTHER CLIENTS
+      if (socket) {
+        socket.emit('task:create', {
+          workspaceId: currentWorkspace._id,
+          task: result.payload // Send the newly created task
+        });
+      }
+
+      toast.success('🎉 Task created successfully!', {
+        icon: '✨',
+        style: {
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        },
+      });
+
+      setTimeout(() => {
+        onClose();
+      }, 500);
+    } else {
+      toast.error(result.payload || 'Failed to create task');
+    }
   };
-
-  if (formData.assignee) {
-    taskData.assignee = formData.assignee;
-  }
-
-  if (formData.dueDate) {
-    taskData.dueDate = formData.dueDate;
-  }
-
-  const result = await dispatch(createTask(taskData));
-
-  setIsLoading(false);
-
-  if (result.type === 'tasks/create/fulfilled') {
-    // Success animation
-    toast.success('🎉 Task created successfully!', {
-      icon: '✨',
-      style: {
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      },
-    });
-    
-    // Close modal after short delay for better UX
-    setTimeout(() => {
-      onClose();
-    }, 500);
-  } else {
-    toast.error(result.payload || 'Failed to create task');
-  }
-};
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-  <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
               <Plus className="w-5 h-5 text-blue-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800">Create New Task</h2>
+            <h2 className="text-2xl font-bold text-gray-800">
+              Create New Task
+            </h2>
           </div>
           <button
             onClick={onClose}
@@ -113,7 +124,9 @@ export default function CreateTaskModal({ initialStatus = 'todo', onClose }) {
               disabled={isLoading}
               maxLength={200}
             />
-            <p className="text-xs text-gray-500 mt-1">{formData.title.length}/200</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {formData.title.length}/200
+            </p>
           </div>
 
           {/* Description */}
@@ -131,12 +144,13 @@ export default function CreateTaskModal({ initialStatus = 'todo', onClose }) {
               disabled={isLoading}
               maxLength={2000}
             />
-            <p className="text-xs text-gray-500 mt-1">{formData.description.length}/2000</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {formData.description.length}/2000
+            </p>
           </div>
 
-          {/* Grid Layout for Selects */}
+          {/* Status + Priority */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Status */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Status
@@ -154,7 +168,6 @@ export default function CreateTaskModal({ initialStatus = 'todo', onClose }) {
               </select>
             </div>
 
-            {/* Priority */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Priority
@@ -177,9 +190,8 @@ export default function CreateTaskModal({ initialStatus = 'todo', onClose }) {
             </div>
           </div>
 
-          {/* Assignee and Due Date */}
+          {/* Assignee + Due Date */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Assignee */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Assign To (Optional)
@@ -195,7 +207,10 @@ export default function CreateTaskModal({ initialStatus = 'todo', onClose }) {
                 >
                   <option value="">Unassigned</option>
                   {currentWorkspace?.members.map((member) => (
-                    <option key={member.user._id} value={member.user._id}>
+                    <option
+                      key={member.user._id}
+                      value={member.user._id}
+                    >
                       {member.user.name}
                     </option>
                   ))}
@@ -203,7 +218,6 @@ export default function CreateTaskModal({ initialStatus = 'todo', onClose }) {
               </div>
             </div>
 
-            {/* Due Date */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Due Date (Optional)
@@ -240,43 +254,19 @@ export default function CreateTaskModal({ initialStatus = 'todo', onClose }) {
                 disabled={isLoading}
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">Separate multiple tags with commas</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Separate multiple tags with commas
+            </p>
           </div>
 
-          {/* Buttons */}
+          {/* Button */}
           <button
-  type="submit"
-  disabled={isLoading}
-  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 shadow-lg hover:shadow-xl disabled:cursor-not-allowed relative overflow-hidden"
->
-  {isLoading ? (
-    <span className="flex items-center justify-center gap-2">
-      {/* Spinner */}
-      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-        <circle 
-          className="opacity-25" 
-          cx="12" 
-          cy="12" 
-          r="10" 
-          stroke="currentColor" 
-          strokeWidth="4" 
-          fill="none"
-        />
-        <path 
-          className="opacity-75" 
-          fill="currentColor" 
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        />
-      </svg>
-      Creating...
-    </span>
-  ) : (
-    <span className="flex items-center justify-center gap-2">
-      <Plus className="w-5 h-5" />
-      Create Task
-    </span>
-  )}
-</button>
+            type="submit"
+            disabled={isLoading}
+            className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+          >
+            {isLoading ? "Creating..." : "Create Task"}
+          </button>
         </form>
       </div>
     </div>
