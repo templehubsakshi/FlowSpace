@@ -1,73 +1,97 @@
 import { useState } from "react";
-import { Menu, X, Briefcase, Users } from "lucide-react";
-import { useSelector } from "react-redux";
-
-function NavItem({ icon, text, active = false, badge }) {
-  return (
-    <button
-      className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors
-      ${active ? "bg-gray-800 text-white" : "text-gray-300 hover:bg-gray-800/60 hover:text-white"}
-    `}
-    >
-      <div className="flex items-center gap-3">
-        <span className="text-gray-300">{icon}</span>
-        <span className="font-medium text-sm">{text}</span>
-      </div>
-
-      {badge > 0 && (
-        <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
-          {badge}
-        </span>
-      )}
-    </button>
-  );
-}
+import { Link, useLocation } from "react-router-dom";
+import NotificationBell from "./NotificationBell";
+import NotificationDrawer from "./NotificationDrawer";
 
 export default function Sidebar() {
-  const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
 
-  // 🛠️ FIX: Safe selector with fallback
-  const currentWorkspace = useSelector(
-    (state) => state?.workspaces?.currentWorkspace || null
-  );
+  const [isOpen, setIsOpen] = useState(true);
+  const [showWorkspaceDropdown, setShowWorkspaceDropdown] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false); // 🔔 ADD
 
-  const memberCount = currentWorkspace?.members?.length || 0;
+  const navItems = [
+    { name: "Dashboard", path: "/dashboard" },
+    { name: "Projects", path: "/projects" },
+    { name: "Tasks", path: "/tasks" },
+    { name: "Analytics", path: "/analytics" },
+  ];
 
   return (
     <>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 bg-gray-900 text-white p-2 rounded-lg"
-      >
-        {isOpen ? <X /> : <Menu />}
-      </button>
-
+      {/* Sidebar */}
       <aside
-        className={`
-          fixed md:static top-0 left-0 h-full w-64 bg-gray-900 text-white p-4
-          transition-transform duration-300 shadow-lg border-r border-gray-800
-          ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
-        `}
+        className={`h-screen bg-[#0F172A] text-white flex flex-col
+        ${isOpen ? "w-64" : "w-20"} transition-all duration-300`}
       >
-        <div className="border-b border-gray-800 pb-4 mb-4">
-          <h2 className="text-lg font-semibold">
-            {currentWorkspace?.name || "No Workspace Selected"}
-          </h2>
-          <p className="text-xs text-gray-400">{memberCount} Members</p>
+        {/* Header */}
+        <div className="p-4 border-b border-gray-800 flex justify-between items-center">
+          <h1 className="text-lg font-semibold">
+            {isOpen ? "FlowSpace" : "FS"}
+          </h1>
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="text-gray-400 hover:text-white"
+          >
+            ☰
+          </button>
         </div>
 
-        <div className="flex-1 flex flex-col gap-2">
-          <NavItem icon={<Briefcase />} text="Dashboard" active />
-          <NavItem icon={<Users />} text="Members" badge={memberCount} />
+        {/* Workspace */}
+        <div className="p-4 border-b border-gray-800">
+          <button
+            onClick={() => setShowWorkspaceDropdown(!showWorkspaceDropdown)}
+            className="w-full text-left text-sm text-gray-300 hover:text-white"
+          >
+            Workspace ▾
+          </button>
+
+          {showWorkspaceDropdown && (
+            <div className="mt-2 space-y-2 text-sm text-gray-400">
+              <p className="cursor-pointer hover:text-white">My Workspace</p>
+              <p className="cursor-pointer hover:text-white">Team Workspace</p>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-2">
+          {navItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`block px-3 py-2 rounded-md text-sm
+              ${
+                location.pathname === item.path
+                  ? "bg-indigo-600 text-white"
+                  : "text-gray-400 hover:bg-gray-800 hover:text-white"
+              }`}
+            >
+              {item.name}
+            </Link>
+          ))}
+        </nav>
+
+        {/* 🔔 FOOTER WITH NOTIFICATION BELL */}
+        <div className="border-t border-gray-800 p-4 space-y-3">
+
+          <NotificationBell
+            isOpen={notificationsOpen}
+            onToggle={() => setNotificationsOpen(!notificationsOpen)}
+          />
+
+          <p className="text-xs text-gray-500 text-center">
+            FlowSpace v1.0.0
+          </p>
         </div>
       </aside>
 
-      {isOpen && (
-        <div
-          onClick={() => setIsOpen(false)}
-          className="fixed inset-0 bg-black/40 md:hidden"
-        ></div>
-      )}
+      {/* 🔔 NOTIFICATION DRAWER (OUTSIDE SIDEBAR) */}
+      <NotificationDrawer
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+      />
     </>
   );
 }

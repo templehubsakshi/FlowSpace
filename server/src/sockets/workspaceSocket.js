@@ -1,8 +1,11 @@
 const Task = require('../models/Task');
 const Workspace = require('../models/Workspace');
 
-const handleWorkspaceSocket = (io, socket) => {
+const onlineUsers = new Map();
 
+const handleWorkspaceSocket = (io, socket) => {
+  onlineUsers.set(socket.userId, socket.id);
+  
   // JOIN WORKSPACE
   socket.on('workspace:join', async (workspaceId) => {
     try {
@@ -21,12 +24,12 @@ const handleWorkspaceSocket = (io, socket) => {
       });
 
       const socketsInRoom = await io.in(`workspace:${workspaceId}`).fetchSockets();
-      const onlineUsers = socketsInRoom.map(s => ({
+      const onlineUsersList = socketsInRoom.map(s => ({
         userId: s.userId,
         userName: s.user.name,
         userEmail: s.user.email
       }));
-      socket.emit('workspace:online-users', onlineUsers);
+      socket.emit('workspace:online-users', onlineUsersList);
 
     } catch (error) {
       console.error('Error in workspace:join', error);
@@ -47,8 +50,10 @@ const handleWorkspaceSocket = (io, socket) => {
   socket.on('task:create', async (data) => {
     try {
       const { workspaceId, task } = data;
-      // optional: validate/save task in DB if needed
-      socket.to(`workspace:${workspaceId}`).emit('task:created', { task, createdBy: socket.user.name });
+      socket.to(`workspace:${workspaceId}`).emit('task:created', { 
+        task, 
+        createdBy: socket.user.name 
+      });
     } catch (error) {
       console.error('Error in task:create', error);
     }
@@ -63,7 +68,11 @@ const handleWorkspaceSocket = (io, socket) => {
 
       Object.assign(task, updates);
       await task.save();
-      socket.to(`workspace:${workspaceId}`).emit('task:updated', { taskId, updates, updatedBy: socket.user.name });
+      socket.to(`workspace:${workspaceId}`).emit('task:updated', { 
+        taskId, 
+        updates, 
+        updatedBy: socket.user.name 
+      });
     } catch (error) {
       console.error('Error in task:update', error);
     }
@@ -81,7 +90,12 @@ const handleWorkspaceSocket = (io, socket) => {
       task.order = newOrder;
       await task.save();
 
-      socket.to(`workspace:${workspaceId}`).emit('task:moved', { taskId, newStatus, oldStatus, movedBy: socket.user.name });
+      socket.to(`workspace:${workspaceId}`).emit('task:moved', { 
+        taskId, 
+        newStatus, 
+        oldStatus, 
+        movedBy: socket.user.name 
+      });
     } catch (error) {
       console.error('Error in task:move', error);
     }
@@ -92,7 +106,10 @@ const handleWorkspaceSocket = (io, socket) => {
     try {
       const { workspaceId, taskId } = data;
       await Task.findByIdAndDelete(taskId);
-      socket.to(`workspace:${workspaceId}`).emit('task:deleted', { taskId, deletedBy: socket.user.name });
+      socket.to(`workspace:${workspaceId}`).emit('task:deleted', { 
+        taskId, 
+        deletedBy: socket.user.name 
+      });
     } catch (error) {
       console.error('Error in task:delete', error);
     }
@@ -101,7 +118,11 @@ const handleWorkspaceSocket = (io, socket) => {
   // COMMENTS
   socket.on('comment:typing', (data) => {
     const { workspaceId, taskId } = data;
-    socket.to(`workspace:${workspaceId}`).emit('comment:typing', { taskId, userName: socket.user.name, userId: socket.userId });
+    socket.to(`workspace:${workspaceId}`).emit('comment:typing', { 
+      taskId, 
+      userName: socket.user.name, 
+      userId: socket.userId 
+    });
   });
 
   socket.on('comment:add', async (data) => {
@@ -113,7 +134,14 @@ const handleWorkspaceSocket = (io, socket) => {
       task.comments.push({ user: socket.userId, text: comment });
       await task.save();
 
-      socket.to(`workspace:${workspaceId}`).emit('comment:added', { taskId, comment: { text: comment, user: { name: socket.user.name } }, addedBy: socket.user.name });
+      socket.to(`workspace:${workspaceId}`).emit('comment:added', { 
+        taskId, 
+        comment: { 
+          text: comment, 
+          user: { name: socket.user.name } 
+        }, 
+        addedBy: socket.user.name 
+      });
     } catch (error) {
       console.error('Error in comment:add', error);
     }
@@ -122,7 +150,11 @@ const handleWorkspaceSocket = (io, socket) => {
   // TASK EDITING LOCK
   socket.on('task:editing-start', (data) => {
     const { workspaceId, taskId } = data;
-    socket.to(`workspace:${workspaceId}`).emit('task:locked', { taskId, lockedBy: socket.user.name, userId: socket.userId });
+    socket.to(`workspace:${workspaceId}`).emit('task:locked', { 
+      taskId, 
+      lockedBy: socket.user.name, 
+      userId: socket.userId 
+    });
   });
 
   socket.on('task:editing-end', (data) => {
@@ -132,13 +164,19 @@ const handleWorkspaceSocket = (io, socket) => {
 
   // DISCONNECT
   socket.on('disconnect', () => {
+    onlineUsers.delete(socket.userId);
     const rooms = Array.from(socket.rooms);
     rooms.forEach(room => {
       if (room !== socket.id && room.startsWith('workspace:')) {
-        socket.to(room).emit('user:left', { userId: socket.userId, userName: socket.user.name });
+        socket.to(room).emit('user:left', { 
+          userId: socket.userId, 
+          userName: socket.user.name 
+        });
       }
     });
   });
 };
 
+// Export the handler and a getter for onlineUsers
 module.exports = handleWorkspaceSocket;
+module.exports.getOnlineUsers = () => onlineUsers;

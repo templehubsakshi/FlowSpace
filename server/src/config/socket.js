@@ -3,27 +3,17 @@ const socketIO = require('socket.io');
 let io;
 
 const initializeSocket = (server) => {
-  io = socketIO(server, {//server ke upar socket laga do
+  io = socketIO(server, {
     cors: {
       origin: process.env.SOCKET_CORS_ORIGIN || 'http://localhost:5173',
       methods: ['GET', 'POST'],
       credentials: true
     },
-    pingTimeout: 60000, // 60 seconds
-    pingInterval: 25000 // 25 seconds
+    pingTimeout: 60000,
+    pingInterval: 25000
   });
 
   console.log('✅ Socket.IO initialized');
-
-  // Handle connections
-  io.on('connection', (socket) => {
-    console.log(`🔌 User connected: ${socket.id}`);
-
-    // Handle disconnection
-    socket.on('disconnect', () => {
-      console.log(`❌ User disconnected: ${socket.id}`);
-    });
-  });
 
   return io;
 };

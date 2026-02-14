@@ -4,6 +4,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const http=require('http')
 require('dotenv').config();
+const workspaceSocket = require('./sockets/workspaceSocket');
 
 
 
@@ -32,7 +33,9 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/tasks', taskRoutes); // ADD
-
+const notificationRoutes=require('./routes/notificationRoutes');
+app.use('/api/notifications', notificationRoutes);
+  
 //Initialize Socket
 const io=initializeSocket(server);
 io.use(socketAuthMiddleware);
@@ -41,6 +44,7 @@ io.on('connection',(socket)=>{
   console.log(`✅ User connected: ${socket.user.name} (${socket.id})`);
   handleWorkspaceSocket(io, socket);
 })
+// workspaceSocket.io = io;
 app.get('/health', (req, res) => {
   res.json({ message: 'FlowSpace API running!' });
 });

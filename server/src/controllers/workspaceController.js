@@ -402,6 +402,8 @@ exports.inviteMember = async (req, res) => {
       message: `${user.name} added to workspace as ${newRole}`,
       workspace
     });
+    console.log("Request Body:", req.body);
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

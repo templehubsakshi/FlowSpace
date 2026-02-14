@@ -56,6 +56,10 @@ const taskSchema=new mongoose.Schema({
       required: true,
       maxlength: 1000
     },
+     mentions: [{                    // ← ADD THIS
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
     createdAt: {
       type: Date,
       default: Date.now

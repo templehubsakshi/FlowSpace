@@ -83,9 +83,9 @@ export const moveTask = createAsyncThunk(
 // Add comment
 export const addComment = createAsyncThunk(
   'tasks/addComment',
-  async ({ taskId, text }, { rejectWithValue }) => {
+  async ({ taskId, text, mentions = [] }, { rejectWithValue }) => {
     try {
-      const response = await api.post(`/tasks/${taskId}/comments`, { text });
+      const response = await api.post(`/tasks/${taskId}/comments`, { text, mentions });
       return { taskId, comment: response.data.comment };
     } catch (error) {
       return rejectWithValue(error.response?.data?.message);
@@ -293,8 +293,7 @@ const taskSlice = createSlice({
         // Error handled in component with rollback
         state.error = action.payload;
       });
-
-    // Add comment
+// Add comment
     builder
       .addCase(addComment.fulfilled, (state, action) => {
         const { taskId, comment } = action.payload;
@@ -303,6 +302,7 @@ const taskSlice = createSlice({
           state.selectedTask.comments.push(comment);
         }
       });
+    
 
     // Delete comment
     builder

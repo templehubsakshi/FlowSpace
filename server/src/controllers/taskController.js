@@ -336,6 +336,7 @@
 // };
 const Task = require('../models/Task');
 const Workspace = require('../models/Workspace');
+const { createNotification } = require('./notificationController');
 
 // ================= CREATE TASK =================
 exports.createTask = async (req, res) => {
@@ -421,7 +422,7 @@ exports.getWorkspaceTasks = async (req, res) => {
 
     const groupedTasks = {
       todo: tasks.filter(t => t.status === 'todo'),
-      in_progress: tasks.filter(t => t.status === 'in-progress'),
+      in_progress: tasks.filter(t => t.status === 'in_progress'),
       done: tasks.filter(t => t.status === 'done')
     };
 
@@ -612,10 +613,11 @@ exports.moveTask = async (req, res) => {
 };
 
 // ================= ADD COMMENT =================
+// ================= ADD COMMENT =================
 exports.addComment = async (req, res) => {
   try {
     const { taskId } = req.params;
-    const { text } = req.body;
+    const { text, mentions = [] } = req.body;
     const userId = req.userId;
 
     if (!text || !text.trim()) {
@@ -629,11 +631,30 @@ exports.addComment = async (req, res) => {
     const isMember = workspace.members.some(m => m.user.toString() === userId);
     if (!isMember) return res.status(403).json({ message: 'Not authorized' });
 
-    task.comments.push({ user: userId, text });
+    task.comments.push({ user: userId, text, mentions });
     await task.save();
     await task.populate('comments.user', 'name email');
 
-    res.json({ success: true, message: 'Comment added', comment: task.comments.at(-1) });
+    // Create notifications for mentions (use Promise.all for async operations)
+    if (mentions && mentions.length > 0) {
+      await Promise.all(
+        mentions.map(mentionUserId =>
+          createNotification({
+            recipient: mentionUserId,
+            sender: userId,
+            workspace: task.workspace,
+            task: task._id,
+            type: 'TASK_MENTIONED',
+          })
+        )
+      );
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Comment added', 
+      comment: task.comments.at(-1) 
+    });
 
   } catch (error) {
     console.error('Add comment error:', error);
@@ -670,3 +691,5 @@ exports.deleteComment = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
