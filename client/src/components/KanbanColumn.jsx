@@ -7,7 +7,6 @@ export default function KanbanColumn({
   status, 
   title, 
   tasks, 
-  color,
   onTaskClick,
   onAddTask,
   onDeleteTask,
@@ -16,45 +15,68 @@ export default function KanbanColumn({
 }) {
   const { setNodeRef } = useDroppable({ id: status });
 
-  const colorClasses = {
-    todo: 'bg-gray-50 border-gray-200',
-    in_progress: 'bg-blue-50 border-blue-200',
-    done: 'bg-green-50 border-green-200'
+  // Column body colors
+  const columnColors = {
+    todo: 'bg-gray-50 dark:bg-slate-900 border-gray-200 dark:border-slate-700',
+    in_progress: 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800',
+    done: 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
   };
 
-  const headerColors = {
-    todo: 'bg-gray-600',
-    in_progress: 'bg-blue-600',
-    done: 'bg-green-600'
+  // Header gradient colors (Modern UI)
+  const headerGradients = {
+    todo: 'from-slate-600 to-slate-700 dark:from-slate-700 dark:to-slate-800',
+    in_progress: 'from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800',
+    done: 'from-green-600 to-green-700 dark:from-green-700 dark:to-green-800'
   };
 
   return (
     <div 
-      className={`flex flex-col h-full rounded-xl border-2 transition-all duration-200 ${colorClasses[status]} ${dropIndicatorClass}`}
+      className={`
+        flex flex-col h-full rounded-2xl border
+        transition-all duration-300 shadow-sm hover:shadow-md
+        ${columnColors[status]} ${dropIndicatorClass}
+      `}
       role="region"
       aria-label={`${title} column`}
     >
-      {/* Column Header */}
-      <div className={`${headerColors[status]} text-white p-4 rounded-t-xl`}>
+      {/* ===== Header ===== */}
+      <div className={`
+        bg-gradient-to-r ${headerGradients[status]}
+        text-white p-4 rounded-t-2xl
+      `}>
         <div className="flex items-center justify-between">
+
+          {/* Left Side */}
           <div className="flex items-center gap-3">
             <h2 
-              className="font-bold text-lg" 
+              className="font-bold text-lg tracking-wide" 
               id={`${status}-heading`}
             >
               {title}
             </h2>
+
+            {/* Task Count */}
             <span 
-              className="bg-white bg-opacity-30 px-3 py-1 rounded-full text-sm font-semibold min-w-[32px] text-center"
+              className="
+                bg-white/25 backdrop-blur-sm
+                px-3 py-1 rounded-full text-sm font-semibold
+                min-w-[32px] text-center
+              "
               aria-label={`${tasks.length} tasks`}
             >
               {tasks.length}
             </span>
           </div>
-          
+
+          {/* Add Task Button */}
           <button
             onClick={onAddTask}
-            className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-all transform hover:scale-110 active:scale-95"
+            className="
+              p-2 rounded-xl
+              bg-white/10 hover:bg-white/20
+              transition-all duration-200
+              hover:scale-110 active:scale-95
+            "
             title={`Add task to ${title}`}
             aria-label={`Add task to ${title}`}
           >
@@ -63,10 +85,13 @@ export default function KanbanColumn({
         </div>
       </div>
 
-      {/* Tasks List */}
+      {/* ===== Task List ===== */}
       <div
         ref={setNodeRef}
-        className="flex-1 p-4 space-y-3 overflow-y-auto custom-scrollbar"
+        className="
+          flex-1 p-4 space-y-3
+          overflow-y-auto custom-scrollbar
+        "
         style={{ minHeight: '400px' }}
         role="list"
         aria-labelledby={`${status}-heading`}
@@ -86,9 +111,11 @@ export default function KanbanColumn({
               />
             ))
           ) : (
-            <div className="text-center py-8 text-gray-400">
-              <p className="text-sm">No tasks yet</p>
-              <p className="text-xs mt-1">Drag tasks here or click + to add</p>
+            <div className="text-center py-10 text-gray-400 dark:text-gray-500">
+              <p className="text-sm font-medium">No tasks yet</p>
+              <p className="text-xs mt-1">
+                Drag tasks here or click + to add
+              </p>
             </div>
           )}
         </SortableContext>

@@ -8,7 +8,10 @@ import App from './App';
 import store from './redux/store';
 import { SocketProvider } from './context/SocketContext'; // Socket context
 import ErrorBoundary from './components/ErrorBoundary'; // Error boundary
+import { ThemeProvider } from './context/ThemeContext'; // Theme context
 import './index.css';
+import "@fontsource/inter/index.css";
+
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -17,7 +20,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       {/* Provide Redux store */}
       <Provider store={store}>
         {/* Provide React Router */}
-
+        <ThemeProvider>
           {/* Provide Socket context */}
           <SocketProvider>
             {/* Main App */}
@@ -25,7 +28,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             {/* Global toast notifications */}
             <Toaster position="top-right" />
           </SocketProvider>
-      
+      </ThemeProvider>
       </Provider>
     </ErrorBoundary>
   </React.StrictMode>

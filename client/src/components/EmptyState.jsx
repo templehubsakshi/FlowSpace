@@ -1,63 +1,46 @@
-import { Plus, CheckCircle2, Clock, Target } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
-export default function EmptyState({ status, onAddTask }) {
-  const config = {
-    todo: {
-      icon: <Target className="w-16 h-16 text-gray-300" />,
-      title: "No tasks to do",
-      description: "Start by creating your first task",
-      color: "text-gray-600"
-    },
-    in_progress: {
-      icon: <Clock className="w-16 h-16 text-blue-300" />,
-      title: "Nothing in progress",
-      description: "Drag tasks here or create new ones",
-      color: "text-blue-600"
-    },
-    done: {
-      icon: <CheckCircle2 className="w-16 h-16 text-green-300" />,
-      title: "No completed tasks yet",
-      description: "Complete tasks to see them here",
-      color: "text-green-600"
-    }
+export default function EmptyState({ 
+  title, 
+  description, 
+  action, 
+  illustration = 'default' 
+}) {
+  const illustrations = {
+    tasks: (
+      <svg className="w-32 h-32 mx-auto mb-6 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+        <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+      </svg>
+    ),
+    workspace: (
+      <svg className="w-32 h-32 mx-auto mb-6 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clipRule="evenodd" />
+      </svg>
+    ),
   };
 
-  const { icon, title, description, color } = config[status] || config.todo;
-
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-      {/* Animated Icon */}
-      <div className="mb-4 animate-bounce">
-        {icon}
-      </div>
-
-      {/* Title */}
-      <h3 className={`text-lg font-semibold ${color} mb-2`}>
+    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+      {illustrations[illustration] || illustrations.tasks}
+      
+      <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
         {title}
       </h3>
-
-      {/* Description */}
-      <p className="text-sm text-gray-500 mb-6 max-w-xs">
+      
+      <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md">
         {description}
       </p>
 
-      {/* Action Button */}
-      {onAddTask && (
+      {action && (
         <button
-          onClick={onAddTask}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all transform hover:scale-105 shadow-md hover:shadow-lg"
+          onClick={action.onClick}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl"
         >
-          <Plus className="w-4 h-4" />
-          Create Task
+          <Plus className="w-5 h-5" />
+          {action.label}
         </button>
       )}
-
-      {/* Decorative Elements */}
-      <div className="mt-8 flex gap-2">
-        <div className="w-2 h-2 bg-gray-300 rounded-full animate-pulse"></div>
-        <div className="w-2 h-2 bg-gray-300 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-        <div className="w-2 h-2 bg-gray-300 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-      </div>
     </div>
   );
 }

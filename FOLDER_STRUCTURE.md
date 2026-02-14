@@ -10,11 +10,11 @@ Flowspace is a full-stack web application with a **React-based frontend** and a 
 
 ```
 Flowspace/
-├── client/           # Frontend application (React + Vite)
-├── server/           # Backend application (Node.js + Express)
-├── help/             # Documentation and help files
-├── .git/             # Git version control
-├── FOLDER_STRUCTURE.md  # This file
+├── FOLDER_STRUCTURE.md    # This file
+├── help                   # Documentation and help files
+├── README.md             # Project documentation
+├── client/               # Frontend application (React + Vite)
+└── server/               # Backend application (Node.js + Express)
 ```
 
 ---
@@ -26,25 +26,75 @@ The frontend React application built with Vite and Redux.
 ### Structure
 ```
 client/
+├── .gitignore                # Git ignore file
 ├── package.json              # Dependencies and scripts
+├── package-lock.json         # Locked dependency versions
 ├── vite.config.js            # Vite build configuration
 ├── eslint.config.js          # ESLint configuration for code quality
+├── Tailwind.config           # Tailwind CSS configuration
 ├── README.md                 # Client-specific documentation
 ├── index.html                # Main HTML entry point
 ├── public/                   # Static assets
-├── src/                      # Source code
-│   ├── main.jsx             # Application entry point
-│   ├── App.jsx              # Root component
-│   ├── App.css              # Root styles
-│   ├── index.css            # Global styles
-│   ├── assets/              # Images, icons, media files
-│   ├── components/          # Reusable React components
-│   ├── context/             # React Context for state management
-│   ├── hooks/               # Custom React hooks
-│   ├── pages/               # Page-level components
-│   ├── redux/               # Redux store, slices, and reducers
-│   ├── services/            # API calls and external services
-│   └── utils/               # Utility functions
+└── src/                      # Source code
+    ├── main.jsx             # Application entry point
+    ├── App.jsx              # Root component
+    ├── App.css              # Root styles
+    ├── index.css            # Global styles
+    ├── components/          # Reusable React components
+    │   ├── ActivityFeed.jsx
+    │   ├── CreateTaskModal.jsx
+    │   ├── CreateWorkspaceModal.jsx
+    │   ├── EmptyState.jsx
+    │   ├── ErrorBoundary.jsx
+    │   ├── FilterPanel.jsx
+    │   ├── InviteMemberModal.jsx
+    │   ├── KanbanBoard.jsx
+    │   ├── KanbanBoardSkeleton.jsx
+    │   ├── KanbanColumn.jsx
+    │   ├── LoadingButton.jsx
+    │   ├── LoadingSpinner.jsx
+    │   ├── MembersPanel.jsx
+    │   ├── MentionDropdown.jsx
+    │   ├── Modals.jsx
+    │   ├── NetworkStatus.jsx
+    │   ├── NotificationBell.jsx
+    │   ├── NotificationDrawer.jsx
+    │   ├── NotificationListener.jsx
+    │   ├── SearchBar.jsx
+    │   ├── Sidebar.jsx
+    │   ├── SkeletonCard.jsx
+    │   ├── StatCard.jsx
+    │   ├── StatisticsPanel.jsx
+    │   ├── TaskCard.jsx
+    │   ├── TaskDetailModal.jsx
+    │   ├── ThemeToggle.jsx
+    │   ├── Form/
+    │   │   └── Input.jsx
+    │   └── modals/
+    ├── context/             # React Context for state management
+    │   ├── SocketContext.jsx
+    │   └── ThemeContext.jsx
+    ├── hooks/               # Custom React hooks
+    │   ├── useNotificationSocket.js
+    │   └── useWorkspaceSocket.js
+    ├── pages/               # Page-level components
+    │   ├── Dashboard.jsx
+    │   ├── Login.jsx
+    │   └── Signup.jsx
+    ├── redux/               # Redux store, slices, and reducers
+    │   ├── store.js
+    │   └── slices/
+    │       ├── authSlice.js
+    │       ├── notificationSlice.js
+    │       ├── statisticsSlice.js
+    │       ├── taskSlice.js
+    │       └── workspaceSlice.js
+    ├── services/            # API calls and external services
+    │   └── api.js
+    └── utils/               # Utility functions
+        ├── performance.js
+        ├── spacing.js
+        └── toast.js
 ```
 
 ### Key Directories
@@ -59,9 +109,17 @@ Reusable React components:
 - `FilterPanel.jsx` - Task filtering UI
 - `InviteMemberModal.jsx` - Member invitation modal
 - `KanbanBoard.jsx` - Main Kanban board
+- `KanbanBoardSkeleton.jsx` - Kanban board loading skeleton
 - `KanbanColumn.jsx` - Individual Kanban columns
+- `LoadingButton.jsx` - Button with loading state
+- `LoadingSpinner.jsx` - Loading spinner component
 - `MembersPanel.jsx` - Team members display
+- `MentionDropdown.jsx` - Dropdown for user mentions
+- `Modals.jsx` - Modal components wrapper
 - `NetworkStatus.jsx` - Network connection indicator
+- `NotificationBell.jsx` - Notification bell icon
+- `NotificationDrawer.jsx` - Notification drawer panel
+- `NotificationListener.jsx` - Real-time notification listener
 - `SearchBar.jsx` - Search functionality
 - `Sidebar.jsx` - Navigation sidebar
 - `SkeletonCard.jsx` - Loading skeleton component
@@ -69,14 +127,18 @@ Reusable React components:
 - `StatisticsPanel.jsx` - Statistics overview
 - `TaskCard.jsx` - Individual task card
 - `TaskDetailModal.jsx` - Task details modal
+- `ThemeToggle.jsx` - Dark/Light theme toggle
+- `Form/Input.jsx` - Form input component
 - `modals/` - Additional modal components
 
 #### **context/**
 React Context API for global state:
 - `SocketContext.jsx` - WebSocket connection context
+- `ThemeContext.jsx` - Theme management context
 
 #### **hooks/**
 Custom React hooks:
+- `useNotificationSocket.js` - Hook for real-time notifications
 - `useWorkspaceSocket.js` - Hook for WebSocket workspace communication
 
 #### **pages/**
@@ -90,6 +152,7 @@ Redux state management:
 - `store.js` - Redux store configuration
 - `slices/`
   - `authSlice.js` - Authentication state
+  - `notificationSlice.js` - Notification state
   - `statisticsSlice.js` - Statistics state
   - `taskSlice.js` - Task state
   - `workspaceSlice.js` - Workspace state
@@ -101,6 +164,8 @@ API and external service integration:
 #### **utils/**
 Utility functions:
 - `performance.js` - Performance monitoring and optimization
+- `spacing.js` - Spacing utility functions
+- `toast.js` - Toast notification utilities
 
 ---
 
@@ -111,15 +176,34 @@ The Node.js/Express backend application.
 ### Structure
 ```
 server/
+├── .env                   # Environment variables
 ├── package.json           # Dependencies and scripts
-├── src/                   # Source code
-│   ├── server.js         # Main server entry point
-│   ├── config/           # Configuration files
-│   ├── controllers/       # Request handlers
-│   ├── middleware/        # Express middleware
-│   ├── models/           # Database schemas/models
-│   ├── routes/           # API routes
-│   └── sockets/          # WebSocket event handlers
+├── package-lock.json      # Locked dependency versions
+└── src/                   # Source code
+    ├── server.js         # Main server entry point
+    ├── config/           # Configuration files
+    │   └── socket.js
+    ├── controllers/       # Request handlers
+    │   ├── authController.js
+    │   ├── notificationController.js
+    │   ├── taskController.js
+    │   └── workspaceController.js
+    ├── middelware/        # Express middleware
+    │   ├── auth.js
+    │   ├── socketAuth.js
+    │   └── workspace.js
+    ├── models/           # Database schemas/models
+    │   ├── Notification.js
+    │   ├── Task.js
+    │   ├── User.js
+    │   └── Workspace.js
+    ├── routes/           # API routes
+    │   ├── authRoutes.js
+    │   ├── notificationRoutes.js
+    │   ├── taskRoutes.js
+    │   └── workspaceRoutes.js
+    └── sockets/          # WebSocket event handlers
+        └── workspaceSocket.js
 ```
 
 ### Key Directories
@@ -131,10 +215,11 @@ Server configuration:
 #### **controllers/**
 Request handlers (business logic):
 - `authController.js` - Authentication logic (login, signup, etc.)
+- `notificationController.js` - Notification management logic
 - `taskController.js` - Task management logic
 - `workspaceController.js` - Workspace management logic
 
-#### **middleware/**
+#### **middelware/**
 Express middleware:
 - `auth.js` - Authentication middleware
 - `socketAuth.js` - WebSocket authentication
@@ -142,13 +227,15 @@ Express middleware:
 
 #### **models/**
 Database models/schemas:
-- `User.js` - User schema and model
+- `Notification.js` - Notification schema and model
 - `Task.js` - Task schema and model
+- `User.js` - User schema and model
 - `Workspace.js` - Workspace schema and model
 
 #### **routes/**
 API endpoint definitions:
 - `authRoutes.js` - `/api/auth/*` endpoints
+- `notificationRoutes.js` - `/api/notifications/*` endpoints
 - `taskRoutes.js` - `/api/tasks/*` endpoints
 - `workspaceRoutes.js` - `/api/workspaces/*` endpoints
 
@@ -242,4 +329,4 @@ This structure allows:
 
 ---
 
-**Last Updated**: January 18, 2026
+**Last Updated**: February 14, 2026

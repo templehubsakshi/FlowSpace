@@ -4,16 +4,12 @@ import { calculateStatistics } from '../redux/slices/statisticsSlice';
 import ActivityFeed from './ActivityFeed';
 import StatCard from './StatCard';
 import { 
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend
 } from 'recharts';
 import { 
-  CheckCircle2, 
-  Clock, 
-  AlertTriangle, 
-  Target,
-  TrendingUp,
-  Users
+  CheckCircle2, Clock, AlertTriangle, Target,
+  TrendingUp, Users, Award, Zap
 } from 'lucide-react';
 
 export default function StatisticsPanel() {
@@ -21,26 +17,23 @@ export default function StatisticsPanel() {
   const { tasks } = useSelector((state) => state.tasks);
   const statistics = useSelector((state) => state.statistics);
 
-  // Calculate statistics when tasks change
   useEffect(() => {
     dispatch(calculateStatistics(tasks));
   }, [tasks, dispatch]);
 
-  // Chart colors
   const STATUS_COLORS = {
-    'To Do': '#6b7280',
+    'To Do': '#64748b',
     'In Progress': '#3b82f6',
     'Done': '#10b981'
   };
 
   const PRIORITY_COLORS = {
-    low: '#9ca3af',
+    low: '#94a3b8',
     medium: '#3b82f6',
     high: '#f97316',
     urgent: '#ef4444'
   };
 
-  // Prepare data for charts
   const statusData = [
     { name: 'To Do', value: statistics.tasksByStatus.todo, color: STATUS_COLORS['To Do'] },
     { name: 'In Progress', value: statistics.tasksByStatus.in_progress, color: STATUS_COLORS['In Progress'] },
@@ -55,95 +48,110 @@ export default function StatisticsPanel() {
   ].filter(item => item.value > 0);
 
   return (
-    <div className="space-y-6">
-      {/* Overview Stats */}
+    <div className="space-y-6 animate-fadeIn">
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Total Tasks"
-          value={statistics.totalTasks}
-          icon={<Target className="w-6 h-6" />}
-          color="blue"
-          subtitle="Across all columns"
-        />
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 rounded-2xl p-6 text-white shadow-xl transform hover:-translate-y-1 transition-all">
+          <div className="flex items-start justify-between mb-4">
+            <div className="p-3 bg-white/20 rounded-xl">
+              <Target className="w-6 h-6" />
+            </div>
+            <Zap className="w-5 h-5 text-yellow-300 animate-pulse" />
+          </div>
+          <p className="text-sm font-semibold opacity-90 mb-1">Total Tasks</p>
+          <p className="text-4xl font-black mb-2">{statistics.totalTasks}</p>
+          <p className="text-xs opacity-75">Across all columns</p>
+        </div>
 
-        <StatCard
-          title="Completion Rate"
-          value={`${statistics.completionRate}%`}
-          icon={<CheckCircle2 className="w-6 h-6" />}
-          color="green"
-          subtitle={`${statistics.tasksByStatus.done} completed`}
-        />
+        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700 rounded-2xl p-6 text-white shadow-xl transform hover:-translate-y-1 transition-all">
+          <div className="flex items-start justify-between mb-4">
+            <div className="p-3 bg-white/20 rounded-xl">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <Award className="w-5 h-5 text-yellow-300 animate-bounce" />
+          </div>
+          <p className="text-sm font-semibold opacity-90 mb-1">Completion Rate</p>
+          <p className="text-4xl font-black mb-2">{statistics.completionRate}%</p>
+          <p className="text-xs opacity-75">{statistics.tasksByStatus.done} completed</p>
+        </div>
 
-        <StatCard
-          title="In Progress"
-          value={statistics.tasksByStatus.in_progress}
-          icon={<Clock className="w-6 h-6" />}
-          color="orange"
-          subtitle="Active tasks"
-        />
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-600 dark:to-orange-700 rounded-2xl p-6 text-white shadow-xl transform hover:-translate-y-1 transition-all">
+          <div className="flex items-start justify-between mb-4">
+            <div className="p-3 bg-white/20 rounded-xl">
+              <Clock className="w-6 h-6" />
+            </div>
+          </div>
+          <p className="text-sm font-semibold opacity-90 mb-1">In Progress</p>
+          <p className="text-4xl font-black mb-2">{statistics.tasksByStatus.in_progress}</p>
+          <p className="text-xs opacity-75">Active tasks</p>
+        </div>
 
-        <StatCard
-          title="Overdue"
-          value={statistics.overdueTasks}
-          icon={<AlertTriangle className="w-6 h-6" />}
-          color={statistics.overdueTasks > 0 ? 'red' : 'green'}
-          subtitle={statistics.overdueTasks > 0 ? 'Needs attention' : 'All on track'}
-        />
+        <div className={`bg-gradient-to-br ${statistics.overdueTasks > 0 ? 'from-red-500 to-red-600' : 'from-teal-500 to-teal-600'} dark:${statistics.overdueTasks > 0 ? 'from-red-600 to-red-700' : 'from-teal-600 to-teal-700'} rounded-2xl p-6 text-white shadow-xl transform hover:-translate-y-1 transition-all`}>
+          <div className="flex items-start justify-between mb-4">
+            <div className="p-3 bg-white/20 rounded-xl">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+          </div>
+          <p className="text-sm font-semibold opacity-90 mb-1">Overdue</p>
+          <p className="text-4xl font-black mb-2">{statistics.overdueTasks}</p>
+          <p className="text-xs opacity-75">
+            {statistics.overdueTasks > 0 ? 'Needs attention' : 'All on track'}
+          </p>
+        </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h3 className="text-lg font-bold text-gray-800 mb-4">Task Progress</h3>
-        <div className="space-y-4">
-          {/* To Do */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border-2 border-slate-200 dark:border-slate-700">
+        <h3 className="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-6">
+          Task Progress
+        </h3>
+
+        <div className="space-y-6">
           <div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-600">To Do</span>
-              <span className="text-sm font-bold text-gray-800">
+            <div className="flex justify-between mb-3">
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">To Do</span>
+              <span className="text-sm font-black text-slate-900 dark:text-white">
                 {statistics.tasksByStatus.todo} tasks
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div 
-                className="bg-gray-600 h-3 rounded-full transition-all duration-500"
-                style={{ 
-                  width: `${statistics.totalTasks > 0 ? (statistics.tasksByStatus.todo / statistics.totalTasks) * 100 : 0}%` 
+            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-slate-500 to-slate-600 h-4 rounded-full transition-all duration-500 shadow-lg"
+                style={{
+                  width: `${statistics.totalTasks ? (statistics.tasksByStatus.todo / statistics.totalTasks) * 100 : 0}%`
                 }}
               />
             </div>
           </div>
 
-          {/* In Progress */}
           <div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-blue-600">In Progress</span>
-              <span className="text-sm font-bold text-gray-800">
+            <div className="flex justify-between mb-3">
+              <span className="text-sm font-bold text-blue-700 dark:text-blue-400">In Progress</span>
+              <span className="text-sm font-black text-slate-900 dark:text-white">
                 {statistics.tasksByStatus.in_progress} tasks
               </span>
             </div>
-            <div className="w-full bg-blue-100 rounded-full h-3">
-              <div 
-                className="bg-blue-600 h-3 rounded-full transition-all duration-500"
-                style={{ 
-                  width: `${statistics.totalTasks > 0 ? (statistics.tasksByStatus.in_progress / statistics.totalTasks) * 100 : 0}%` 
+            <div className="w-full bg-blue-100 dark:bg-blue-900/30 rounded-full h-4 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-blue-500 to-blue-600 h-4 rounded-full transition-all duration-500 shadow-lg"
+                style={{
+                  width: `${statistics.totalTasks ? (statistics.tasksByStatus.in_progress / statistics.totalTasks) * 100 : 0}%`
                 }}
               />
             </div>
           </div>
 
-          {/* Done */}
           <div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-green-600">Done</span>
-              <span className="text-sm font-bold text-gray-800">
+            <div className="flex justify-between mb-3">
+              <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">Done</span>
+              <span className="text-sm font-black text-slate-900 dark:text-white">
                 {statistics.tasksByStatus.done} tasks
               </span>
             </div>
-            <div className="w-full bg-green-100 rounded-full h-3">
-              <div 
-                className="bg-green-600 h-3 rounded-full transition-all duration-500"
-                style={{ 
-                  width: `${statistics.totalTasks > 0 ? (statistics.tasksByStatus.done / statistics.totalTasks) * 100 : 0}%` 
+            <div className="w-full bg-emerald-100 dark:bg-emerald-900/30 rounded-full h-4 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-4 rounded-full transition-all duration-500 shadow-lg"
+                style={{
+                  width: `${statistics.totalTasks ? (statistics.tasksByStatus.done / statistics.totalTasks) * 100 : 0}%`
                 }}
               />
             </div>
@@ -151,26 +159,24 @@ export default function StatisticsPanel() {
         </div>
       </div>
 
-      {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Task Distribution Pie Chart */}
         {statusData.length > 0 && (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">Task Distribution</h3>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border-2 border-slate-200 dark:border-slate-700">
+            <h3 className="text-xl font-black text-slate-900 dark:text-white mb-6">
+              Task Distribution
+            </h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie
-                  data={statusData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
+                <Pie 
+                  data={statusData} 
+                  dataKey="value" 
+                  outerRadius={100} 
+                  label 
+                  strokeWidth={2}
+                  stroke="white"
                 >
-                  {statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  {statusData.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -179,19 +185,20 @@ export default function StatisticsPanel() {
           </div>
         )}
 
-        {/* Priority Breakdown */}
         {priorityData.length > 0 && (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">Priority Breakdown</h3>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border-2 border-slate-200 dark:border-slate-700">
+            <h3 className="text-xl font-black text-slate-900 dark:text-white mb-6">
+              Priority Breakdown
+            </h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={priorityData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="name" stroke="#64748b" fontWeight="bold" />
+                <YAxis stroke="#64748b" fontWeight="bold" />
                 <Tooltip />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                  {priorityData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                <Bar dataKey="value" radius={[12, 12, 0, 0]}>
+                  {priorityData.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
                   ))}
                 </Bar>
               </BarChart>
@@ -200,33 +207,34 @@ export default function StatisticsPanel() {
         )}
       </div>
 
-      {/* Tasks by Assignee */}
       {statistics.tasksByAssignee.length > 0 && (
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="w-5 h-5 text-purple-600" />
-            <h3 className="text-lg font-bold text-gray-800">Tasks by Team Member</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border-2 border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
+              <Users className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+              Tasks by Team Member
+            </h3>
           </div>
-          <div className="space-y-4">
-            {statistics.tasksByAssignee.map((assignee, index) => (
-              <div key={index}>
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                      {assignee.name.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="font-medium text-gray-800">{assignee.name}</span>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    <span className="font-bold text-gray-800">{assignee.completed}</span>
-                    <span> / {assignee.count} completed</span>
-                  </div>
+
+          <div className="space-y-5">
+            {statistics.tasksByAssignee.map((a, i) => (
+              <div key={i}>
+                <div className="flex justify-between mb-3">
+                  <span className="text-slate-900 dark:text-white font-bold text-lg">
+                    {a.name}
+                  </span>
+                  <span className="text-slate-600 dark:text-slate-400 font-bold">
+                    {a.completed} / {a.count}
+                  </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-500"
-                    style={{ 
-                      width: `${assignee.count > 0 ? (assignee.completed / assignee.count) * 100 : 0}%` 
+
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 h-4 rounded-full transition-all duration-500 shadow-lg"
+                    style={{
+                      width: `${a.count ? (a.completed / a.count) * 100 : 0}%`
                     }}
                   />
                 </div>
@@ -235,13 +243,16 @@ export default function StatisticsPanel() {
           </div>
         </div>
       )}
-<ActivityFeed />
-      {/* Empty State */}
+
+      <ActivityFeed />
+
       {statistics.totalTasks === 0 && (
-        <div className="bg-white rounded-xl shadow-md p-12 text-center">
-          <TrendingUp className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-800 mb-2">No Data Yet</h3>
-          <p className="text-gray-600">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-16 text-center border-2 border-slate-200 dark:border-slate-700">
+          <TrendingUp className="w-24 h-24 text-slate-300 dark:text-slate-600 mx-auto mb-6" />
+          <h3 className="text-3xl font-black bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-3">
+            No Data Yet
+          </h3>
+          <p className="text-slate-600 dark:text-slate-400 text-lg font-medium">
             Create some tasks to see statistics and insights
           </p>
         </div>
