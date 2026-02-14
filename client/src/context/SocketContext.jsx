@@ -27,7 +27,7 @@ export function SocketProvider({ children }) {
     console.log('🔌 Creating socket connection with token...');
 
     // Create socket connection
-    const newSocket = io("http://localhost:5000", {
+    const newSocket = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:5000", {
       auth: {
         token: token
       },
