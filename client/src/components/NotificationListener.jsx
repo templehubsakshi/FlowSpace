@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
-import { useSocket } from '../context/SocketContext';
+import { useSocket } from '../hooks/Usesocket'
 import { addNotification } from '../redux/slices/notificationSlice';
 import toast from 'react-hot-toast';
 

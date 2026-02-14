@@ -56,6 +56,7 @@ const statisticsSlice = createSlice({
       ).length;
 
       // Tasks by priority
+      // ✅ FIX: Use Object.hasOwn instead of hasOwnProperty
       state.tasksByPriority = {
         low: 0,
         medium: 0,
@@ -63,7 +64,7 @@ const statisticsSlice = createSlice({
         urgent: 0
       };
       allTasks.forEach(task => {
-        if (state.tasksByPriority.hasOwnProperty(task.priority)) {
+        if (Object.hasOwn(state.tasksByPriority, task.priority)) {
           state.tasksByPriority[task.priority]++;
         }
       });

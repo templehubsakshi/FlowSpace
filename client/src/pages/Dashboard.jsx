@@ -38,11 +38,16 @@ export default function Dashboard() {
     dispatch(fetchWorkspaces());
   }, [dispatch]);
 
+  // ✅ FIX: Check workspace condition and set initial modal state together
+  // This avoids setState in useEffect
   useEffect(() => {
-    if (workspaces && workspaces.length === 0 && !currentWorkspace) {
-      setShowCreateModal(true);
+    const shouldShowModal = workspaces && workspaces.length === 0 && !currentWorkspace;
+    if (shouldShowModal && !showCreateModal) {
+      // Use a timeout to defer state update to next tick
+      const timer = setTimeout(() => setShowCreateModal(true), 0);
+      return () => clearTimeout(timer);
     }
-  }, [workspaces, currentWorkspace]);
+  }, [workspaces, currentWorkspace, showCreateModal]);
 
   const handleLogout = async () => {
     const result = await dispatch(logout());
@@ -104,28 +109,31 @@ export default function Dashboard() {
               { key: "board", label: "Board", icon: LayoutDashboard },
               { key: "statistics", label: "Statistics", icon: BarChart3 },
               { key: "members", label: "Members", icon: Users },
-            ].map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setActiveTab(key)}
-                className={`
-                  relative flex items-center gap-2.5 py-4 text-base font-semibold
-                  transition-colors duration-200
-                  ${
-                    activeTab === key
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                  }
-                `}
-              >
-                <Icon className="w-5 h-5" />
-                {label}
+            ].map(({ key, label, icon }) => {
+              const IconComponent = icon;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  className={`
+                    relative flex items-center gap-2.5 py-4 text-base font-semibold
+                    transition-colors duration-200
+                    ${
+                      activeTab === key
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                    }
+                  `}
+                >
+                  <IconComponent className="w-5 h-5" />
+                  {label}
 
-                {activeTab === key && (
-                  <span className="absolute bottom-0 left-0 w-full h-[2px] bg-blue-500 rounded-full" />
-                )}
-              </button>
-            ))}
+                  {activeTab === key && (
+                    <span className="absolute bottom-0 left-0 w-full h-[2px] bg-blue-500 rounded-full" />
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
       </nav>

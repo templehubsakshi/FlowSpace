@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createTask } from '../redux/slices/taskSlice';
-import { useSocket } from '../context/SocketContext';
+import { useSocket } from '../hooks/Usesocket'
 import toast from 'react-hot-toast';
 import { X, Plus, Calendar, Tag, User, AlertCircle } from 'lucide-react';
 

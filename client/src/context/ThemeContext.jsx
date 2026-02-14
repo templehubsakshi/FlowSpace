@@ -1,49 +1,37 @@
-import { createContext, useContext, useEffect, useState } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useEffect, useState } from 'react';
 
-const ThemeContext = createContext(null);
+// Export context for the separate hook file
+export const ThemeContext = createContext();
 
-export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error("useTheme must be used within ThemeProvider");
-  }
-  return context;
-};
-
-export const ThemeProvider = ({ children }) => {
-  const [theme, setThemeState] = useState(() => {
-    const saved = localStorage.getItem("flowspace-theme");
-    if (saved) return saved;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
+export function ThemeProvider({ children }) {
+  const [isDark, setIsDark] = useState(() => {
+    // Check localStorage or system preference
+    const saved = localStorage.getItem('theme');
+    if (saved) {
+      return saved === 'dark';
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(theme);
-    localStorage.setItem("flowspace-theme", theme);
-  }, [theme]);
+    if (isDark) {
+      root.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      root.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDark]);
 
   const toggleTheme = () => {
-    setThemeState((prev) => (prev === "dark" ? "light" : "dark"));
-  };
-
-  const setTheme = (mode) => {
-    setThemeState(mode);
+    setIsDark(prev => !prev);
   };
 
   return (
-    <ThemeContext.Provider
-      value={{
-        theme,
-        isDark: theme === "dark",
-        toggleTheme,
-        setTheme,
-      }}
-    >
+    <ThemeContext.Provider value={{ isDark, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
-};
+}

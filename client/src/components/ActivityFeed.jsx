@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useSelector } from "react-redux";
 import {
   Plus,
@@ -10,9 +10,9 @@ import {
 
 export default function ActivityFeed() {
   const { tasks } = useSelector((state) => state.tasks);
-  const [activities, setActivities] = useState([]);
 
-  useEffect(() => {
+  // ✅ FIX: Use useMemo instead of useEffect + setState
+  const activities = useMemo(() => {
     const allTasks = [
       ...(tasks?.todo || []),
       ...(tasks?.in_progress || []),
@@ -25,7 +25,7 @@ export default function ActivityFeed() {
         new Date(a.updatedAt || a.createdAt)
     );
 
-    const newActivities = sortedTasks.slice(0, 10).map((task) => {
+    return sortedTasks.slice(0, 10).map((task) => {
       const isNew =
         !task.updatedAt || task.updatedAt === task.createdAt;
 
@@ -39,8 +39,6 @@ export default function ActivityFeed() {
         priority: task.priority,
       };
     });
-
-    setActivities(newActivities);
   }, [tasks]);
 
   const getActivityIcon = (type) => {

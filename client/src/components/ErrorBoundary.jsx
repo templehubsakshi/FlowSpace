@@ -11,7 +11,8 @@ class ErrorBoundary extends React.Component {
     };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError() {
+    // ✅ FIX: Removed unused error parameter
     return { hasError: true };
   }
 
@@ -49,7 +50,8 @@ class ErrorBoundary extends React.Component {
               We're sorry for the inconvenience. The application encountered an unexpected error.
             </p>
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {/* ✅ FIX: Check for development mode without using process directly */}
+            {import.meta.env.DEV && this.state.error && (
               <div className="mb-6 p-4 bg-red-50 rounded-lg text-left">
                 <p className="text-sm font-mono text-red-800 break-all">
                   {this.state.error.toString()}

@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
-import { User } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 
 /**
  * MentionDropdown
@@ -17,27 +16,29 @@ import { User } from 'lucide-react';
  *   - Auto-scrolling the highlighted item into view
  */
 export default function MentionDropdown({ query, members, onSelect, onClose }) {
-  const [highlightedIndex, setHighlightedIndex] = useState(0);
   const listRef = useRef(null);
   const highlightedRef = useRef(null);
 
   // Filter members whose name starts with the query (case-insensitive)
   // If query is empty string (user just typed @), show everyone
-  const filtered = members.filter((member) =>
-    member.name.toLowerCase().startsWith(query.toLowerCase())
+  const filtered = useMemo(() => 
+    members.filter((member) =>
+      member.name.toLowerCase().startsWith(query.toLowerCase())
+    ), [members, query]
   );
 
-  // Reset highlight to top whenever the query changes
-  useEffect(() => {
-    setHighlightedIndex(0);
-  }, [query]);
+  // ✅ FIX: Initialize to 0 and clamp within bounds inline
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  
+  // Ensure index is always valid (clamp during state updates instead of in useEffect)
+  const safeHighlightedIndex = Math.min(highlightedIndex, Math.max(0, filtered.length - 1));
 
   // Auto-scroll the highlighted item into view
   useEffect(() => {
     if (highlightedRef.current) {
       highlightedRef.current.scrollIntoView({ block: 'nearest' });
     }
-  }, [highlightedIndex]);
+  }, [safeHighlightedIndex]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -57,7 +58,9 @@ export default function MentionDropdown({ query, members, onSelect, onClose }) {
 
         case 'Enter':
           e.preventDefault();
-          onSelect(filtered[highlightedIndex]);
+          if (filtered[safeHighlightedIndex]) {
+            onSelect(filtered[safeHighlightedIndex]);
+          }
           break;
 
         case 'Escape':
@@ -72,7 +75,7 @@ export default function MentionDropdown({ query, members, onSelect, onClose }) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [filtered, highlightedIndex, onSelect, onClose]);
+  }, [filtered, safeHighlightedIndex, onSelect, onClose]);
 
   // Nothing to show — don't render anything
   if (filtered.length === 0) return null;
@@ -92,16 +95,16 @@ export default function MentionDropdown({ query, members, onSelect, onClose }) {
         {filtered.map((member, index) => (
           <li
             key={member._id}
-            ref={index === highlightedIndex ? highlightedRef : null}
+            ref={index === safeHighlightedIndex ? highlightedRef : null}
             onClick={() => onSelect(member)}
             className={`
               flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors
-              ${index === highlightedIndex ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}
+              ${index === safeHighlightedIndex ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}
             `}
           >
             {/* Avatar circle with first letter */}
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
-              ${index === highlightedIndex ? 'bg-blue-200 text-blue-700' : 'bg-gray-200 text-gray-600'}
+              ${index === safeHighlightedIndex ? 'bg-blue-200 text-blue-700' : 'bg-gray-200 text-gray-600'}
             `}>
               {member.name.charAt(0).toUpperCase()}
             </div>

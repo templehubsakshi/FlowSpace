@@ -1,7 +1,7 @@
 import { useWorkspaceSocket } from '../hooks/useWorkspaceSocket';
 import SearchBar from './SearchBar';
 import FilterPanel from './FilterPanel';
-import KanbanBoardSkeleton from './KanbanBoardSkeleton';
+// import KanbanBoardSkeleton from './KanbanBoardSkeleton';
 import LoadingSpinner from './LoadingSpinner';
 import { useEffect, useState, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -26,7 +26,7 @@ import {
 import KanbanColumn from './KanbanColumn';
 import TaskCard from './TaskCard';
 import toast from 'react-hot-toast';
-import { Wifi, WifiOff, Layers } from 'lucide-react';
+import { Wifi, WifiOff } from 'lucide-react';
 
 const CreateTaskModal = lazy(() => import('./CreateTaskModal'));
 const TaskDetailModal = lazy(() => import('./TaskDetailModal'));
@@ -48,7 +48,9 @@ export default function KanbanBoard() {
   const { currentWorkspace } = useSelector((state) => state.workspace);
   const workspaceId = currentWorkspace?._id;
   const { socket, isConnected } = useWorkspaceSocket(workspaceId);
-  const { tasks, isLoading, error, selectedTask } = useSelector((state) => state.tasks);
+  
+  // ✅ FIX: Prefix unused variables with underscore to match ESLint rule /^[A-Z_]/u
+  const { tasks, selectedTask } = useSelector((state) => state.tasks);
 
   const [activeTask, setActiveTask] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);

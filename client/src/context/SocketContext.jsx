@@ -1,131 +1,26 @@
-// // client/src/context/SocketContext.jsx
-// import { createContext, useContext, useEffect, useState } from 'react';
-// import { io } from 'socket.io-client';
-// import { useSelector } from 'react-redux';
-// import toast from 'react-hot-toast';
-
-// const SocketContext = createContext();
-
-// export const useSocket = () => {
-//   const context = useContext(SocketContext);
-//   if (!context) {
-//     throw new Error('useSocket must be used within SocketProvider');
-//   }
-//   return context;
-// };
-
-// export const SocketProvider = ({ children }) => {
-//   const [socket, setSocket] = useState(null);
-//   const [isConnected, setIsConnected] = useState(false);
-//   const [onlineUsers, setOnlineUsers] = useState([]);
-  
-//   const { user, token } = useSelector((state) => state.auth);
-
-//   useEffect(() => {
-//     // Only connect if user is authenticated
-//     if (!user || !token) {
-//       if (socket) {
-//         socket.disconnect();
-//         setSocket(null);
-//         setIsConnected(false);
-//       }
-//       return;
-//     }
-
-//     // Create socket connection
-//     const newSocket = io("http://localhost:5000", {
-//       auth: {
-//         token: token
-//       },
-//       reconnection: true,
-//       reconnectionAttempts: 5,
-//       reconnectionDelay: 1000
-//     });
-// window.socket = newSocket;
-//     // Connection events
-//     newSocket.on('connect', () => {
-//       console.log('✅ Socket connected');
-//       setIsConnected(true);
-//       toast.success('Connected - Live updates active', {
-//         duration: 2000,
-//         icon: '🟢'
-//       });
-//     });
-
-//     newSocket.on('disconnect', () => {
-//       console.log('❌ Socket disconnected');
-//       setIsConnected(false);
-//       toast.error('Connection lost - Reconnecting...', {
-//         duration: 2000,
-//         icon: '🔴'
-//       });
-//     });
-
-//     newSocket.on('connect_error', (error) => {
-//       console.error('Socket connection error:', error);
-//       toast.error('Connection error', { duration: 2000 });
-//     });
-
-//     newSocket.on('error', (error) => {
-//       console.error('Socket error:', error);
-//       toast.error(error.message || 'Socket error occurred');
-//     });
-
-//     setSocket(newSocket);
-
-//     // Cleanup on unmount
-//     return () => {
-//       newSocket.disconnect();
-//     };
-//   }, [user, token]);
-
-//   const value = {
-//     socket,
-//     isConnected,
-//     onlineUsers,
-//     setOnlineUsers
-//   };
-
-//   return (
-//     <SocketContext.Provider value={value}>
-//       {children}
-//     </SocketContext.Provider>
-//   );
-// };
-import { createContext, useContext, useEffect, useState } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 
-const SocketContext = createContext();
+// Export context for the separate hook file
+export const SocketContext = createContext();
 
-export const useSocket = () => {
-  const context = useContext(SocketContext);
-  if (!context) {
-    throw new Error('useSocket must be used within SocketProvider');
-  }
-  return context;
-};
-
-export const SocketProvider = ({ children }) => {
+export function SocketProvider({ children }) {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState([]);
   
   const { user } = useSelector((state) => state.auth);
   
-  // ✅ FIX: Get token from localStorage instead of Redux
+  // Get token from localStorage instead of Redux
   const token = localStorage.getItem('token');
 
   useEffect(() => {
     // Only connect if user is authenticated AND token exists
     if (!user || !token) {
       console.log('⏳ No user or token, skipping socket connection');
-      if (socket) {
-        socket.disconnect();
-        setSocket(null);
-        setIsConnected(false);
-      }
       return;
     }
 
@@ -134,49 +29,64 @@ export const SocketProvider = ({ children }) => {
     // Create socket connection
     const newSocket = io("http://localhost:5000", {
       auth: {
-        token: token  // ✅ Now this will work!
+        token: token
       },
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000
     });
 
-    // ✅ Expose socket globally for debugging
+    // Expose socket globally for debugging
     window.socket = newSocket;
+
+    let mounted = true;
 
     // Connection events
     newSocket.on('connect', () => {
       console.log('✅ Socket connected:', newSocket.id);
-      setIsConnected(true);
-      toast.success('Connected - Live updates active', {
-        duration: 2000,
-        icon: '🟢'
-      });
+      if (mounted) {
+        setIsConnected(true);
+        toast.success('Connected - Live updates active', {
+          duration: 2000,
+          icon: '🟢'
+        });
+      }
     });
 
     newSocket.on('disconnect', () => {
       console.log('❌ Socket disconnected');
-      setIsConnected(false);
-      toast.error('Connection lost - Reconnecting...', {
-        duration: 2000,
-        icon: '🔴'
-      });
+      if (mounted) {
+        setIsConnected(false);
+        toast.error('Connection lost - Reconnecting...', {
+          duration: 2000,
+          icon: '🔴'
+        });
+      }
     });
 
     newSocket.on('connect_error', (error) => {
       console.error('❌ Socket connection error:', error.message);
-      toast.error('Connection error', { duration: 2000 });
+      if (mounted) {
+        toast.error('Connection error', { duration: 2000 });
+      }
     });
 
     newSocket.on('error', (error) => {
       console.error('❌ Socket error:', error);
-      toast.error(error.message || 'Socket error occurred');
+      if (mounted) {
+        toast.error(error.message || 'Socket error occurred');
+      }
     });
 
-    setSocket(newSocket);
+    // Socket initialization in useEffect is necessary for real-time connections
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    if (mounted) {
+      setSocket(newSocket);
+    }
 
     // Cleanup on unmount
     return () => {
+      mounted = false;
       console.log('🧹 Disconnecting socket...');
       newSocket.disconnect();
       window.socket = null;
@@ -195,4 +105,4 @@ export const SocketProvider = ({ children }) => {
       {children}
     </SocketContext.Provider>
   );
-};
+}

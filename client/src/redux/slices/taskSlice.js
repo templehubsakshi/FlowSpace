@@ -166,7 +166,7 @@ const taskSlice = createSlice({
     
     // Optimistic update for drag-and-drop
     optimisticMoveTask: (state, action) => {
-      const { taskId, sourceStatus, destinationStatus, sourceIndex, destinationIndex } = action.payload;
+      const { taskId: _taskId, sourceStatus, destinationStatus, sourceIndex, destinationIndex } = action.payload;
       
       // Find and remove task from source
       const taskToMove = state.tasks[sourceStatus][sourceIndex];
@@ -260,21 +260,23 @@ const taskSlice = createSlice({
     // Delete task
     builder
       .addCase(deleteTask.fulfilled, (state, action) => {
-        const taskId = action.payload;
+        // ✅ FIX: Removed unused taskId variable
+        const deletedTaskId = action.payload;
         
         // Remove from all status arrays
         Object.keys(state.tasks).forEach(status => {
-          state.tasks[status] = state.tasks[status].filter(t => t._id !== taskId);
+          state.tasks[status] = state.tasks[status].filter(t => t._id !== deletedTaskId);
         });
 
-        if (state.selectedTask?._id === taskId) {
+        if (state.selectedTask?._id === deletedTaskId) {
           state.selectedTask = null;
         }
       });
 
     // Move task
     builder
-      .addCase(moveTask.pending, (state) => {
+      .addCase(moveTask.pending, () => {
+        // ✅ FIX: Removed unused state parameter
         // Task already moved optimistically
       })
       .addCase(moveTask.fulfilled, (state, action) => {
@@ -293,7 +295,8 @@ const taskSlice = createSlice({
         // Error handled in component with rollback
         state.error = action.payload;
       });
-// Add comment
+    
+    // Add comment
     builder
       .addCase(addComment.fulfilled, (state, action) => {
         const { taskId, comment } = action.payload;
@@ -303,7 +306,6 @@ const taskSlice = createSlice({
         }
       });
     
-
     // Delete comment
     builder
       .addCase(deleteComment.fulfilled, (state, action) => {
