@@ -56,21 +56,21 @@ Flowspace/
 ## 🛠️ Tech Stack
 
 ### Frontend
-- **React 19** - UI library
-- **Vite 7** - Fast build tool and dev server
-- **Redux Toolkit** - State management
-- **React Router** - Client-side routing
-- **Tailwind CSS** - Utility-first CSS framework
-- **Socket.IO Client** - Real-time communication
-- **Recharts** - Data visualization
-- **DnD Kit** - Drag and drop functionality
-- **Lucide React** - Icon library
-- **Axios** - HTTP client
-- **React Hot Toast** - Toast notifications
+- **React 19.2** - UI library with latest features
+- **Vite 7.2** - Next-generation build tool and dev server
+- **Redux Toolkit 2.11** - State management
+- **React Router 7.11** - Client-side routing
+- **Tailwind CSS 4.1** - Utility-first CSS framework
+- **Socket.IO Client 4.8** - Real-time communication
+- **Recharts 3.6** - Data visualization
+- **DnD Kit** - Drag and drop functionality (Core 6.3, Sortable 10.0)
+- **Lucide React 0.561** - Icon library
+- **Axios 1.13** - HTTP client
+- **React Hot Toast 2.6** - Toast notifications
 
 ### Backend
 - **Node.js** - JavaScript runtime
-- **Express 5** - Web framework
+- **Express** - Web framework
 - **MongoDB** - NoSQL database
 - **Mongoose** - MongoDB ODM
 - **Socket.IO** - Real-time bidirectional communication
@@ -81,15 +81,15 @@ Flowspace/
 ## 📋 Prerequisites
 
 Before you begin, ensure you have installed:
-- **Node.js** (v16 or higher)
-- **npm** or **yarn** package manager
-- **MongoDB** (local or Atlas connection string)
+- **Node.js** (v18.x or higher recommended, minimum v16.x)
+- **npm** (v8.x or higher) or **yarn** (v1.22.x or higher)
+- **MongoDB** (v5.0 or higher) - Local installation or MongoDB Atlas account
 
 ## 🚀 Getting Started
 
 ### 1. Clone the Repository
 ```bash
-git clone <repository-url>
+[git clone https://github.com/yourusername/flowspace.git](https://github.com/templehubsakshi/FlowSpace.git)
 cd Flowspace
 ```
 
@@ -102,13 +102,23 @@ cd server
 npm install
 
 # Create .env file in the server directory
-# Add the following environment variables:
-# MONGO_URI=mongodb://localhost:27017/flowspace
-# PORT=5000
-# JWT_SECRET=your_jwt_secret_key
+# Copy the example below and add your actual values
+```
 
-# Start the server
-npm run dev    # Development with nodemon
+**Create `server/.env` file:**
+```env
+MONGO_URI=mongodb://localhost:27017/flowspace
+PORT=5000
+JWT_SECRET=your_super_secret_jwt_key_here
+NODE_ENV=development
+CORS_ORIGIN=http://localhost:5173
+```
+
+> **Security Tip:** Generate a strong JWT secret using: `openssl rand -base64 32`
+
+**Start the server:**
+```bash
+npm run dev    # Development with nodemon (auto-reload)
 npm start      # Production
 ```
 
@@ -121,15 +131,36 @@ cd client
 
 # Install dependencies
 npm install
+```
 
-# Start the development server
-npm run dev
+**Create `client/.env.local` file (optional):**
+```env
+VITE_API_URL=http://localhost:5000
+```
+
+**Start the development server:**
+```bash
+npm run dev    # Start Vite dev server with HMR
 
 # Build for production
 npm run build
+
+# Preview production build
+npm run preview
 ```
 
 The frontend will be available at `http://localhost:5173` (default Vite port)
+
+### 4. Verify Installation
+
+**Check Backend:**
+- Terminal should show: `✓ Connected to MongoDB` and `✓ Server running on port 5000`
+- Visit `http://localhost:5000` - You should see a response (or test an API endpoint)
+
+**Check Frontend:**
+- Browser should automatically open to `http://localhost:5173`
+- No console errors in browser DevTools
+- Application should load the login/signup page
 
 ## 🔌 API Endpoints
 
@@ -260,16 +291,16 @@ FlowSpace uses Socket.IO for real-time collaboration:
 
 **Frontend:**
 ```bash
-npm run dev     # Start dev server
-npm run build   # Build for production
-npm run preview # Preview production build
-npm run lint    # Run ESLint
+npm run dev     # Start Vite dev server with HMR at http://localhost:5173
+npm run build   # Build optimized production bundle to /dist
+npm run preview # Preview production build locally
+npm run lint    # Run ESLint to check code quality
 ```
 
 **Backend:**
 ```bash
-npm run dev     # Start with nodemon (auto-reload)
-npm start       # Start production server
+npm run dev     # Start server with nodemon (auto-reload on file changes)
+npm start       # Start production server with node
 ```
 
 ## 📈 Performance Features
@@ -280,6 +311,19 @@ npm start       # Start production server
 - **Image Optimization** - Optimized asset loading
 - **Redux Selector Memoization** - Prevent unnecessary re-renders
 
+
+
+
+## 🔒 Security Best Practices
+
+1. **Never commit `.env` files** - Already added to `.gitignore`
+2. **Use strong JWT secrets** - Generate with: `openssl rand -base64 32`
+3. **Enable HTTPS in production** - Use SSL/TLS certificates
+4. **Implement rate limiting** - Prevent API abuse
+5. **Validate all inputs** - Sanitize user data on both client and server
+6. **Use environment variables** - Never hardcode secrets
+7. **Keep dependencies updated** - Regularly run `npm audit` and `npm update`
+
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -288,62 +332,59 @@ npm start       # Start production server
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📝 Environment Variables
+## 📝 Environment Variables Reference
 
-### Server (.env)
-```
+### Server (`server/.env`)
+```env
+# Database
 MONGO_URI=mongodb://localhost:27017/flowspace
+# or MongoDB Atlas: mongodb+srv://<username>:<password>@cluster.mongodb.net/flowspace
+
+# Server
 PORT=5000
-JWT_SECRET=your_secret_key_here
 NODE_ENV=development
+
+# Authentication
+JWT_SECRET=your_super_secret_jwt_key_minimum_32_characters
+
+# CORS
+CORS_ORIGIN=http://localhost:5173
 ```
 
-### Client (.env.local)
-```
+### Client (`client/.env.local`)
+```env
+# API Configuration
 VITE_API_URL=http://localhost:5000
+
+
 ```
 
 ## 🐛 Troubleshooting
 
 ### MongoDB Connection Issues
-- Ensure MongoDB service is running
-- Check MONGO_URI in .env file
+- Ensure MongoDB service is running: `sudo systemctl status mongod` (Linux) or check MongoDB Compass
+- Check `MONGO_URI` in `.env` file for typos
 - Verify network connectivity if using MongoDB Atlas
+- Check firewall rules and IP whitelist in MongoDB Atlas
 
 ### CORS Errors
-- Check origin in server `cors()` configuration
-- Ensure frontend and backend URLs match
+- Verify `CORS_ORIGIN` in server `.env` matches your frontend URL exactly
+- Check that frontend is running on the expected port (default: 5173)
+- Clear browser cache and try again
 
 ### WebSocket Connection Failures
-- Verify Socket.IO is initialized on backend
+- Verify Socket.IO is properly initialized in both client and server
 - Check browser console for connection errors
-- Ensure JWT token is valid for socket authentication
+- Ensure JWT token is valid and not expired
+- Check network tab in DevTools for WebSocket handshake
 
-### Port Already in Use
-```bash
-# Change PORT in .env or use different port
-PORT=5001 npm run dev
-```
-
-## 📚 Additional Resources
-
-- [React Documentation](https://react.dev)
-- [Redux Documentation](https://redux.js.org)
-- [Express.js Guide](https://expressjs.com)
-- [MongoDB Documentation](https://docs.mongodb.com)
-- [Socket.IO Guide](https://socket.io/docs)
-- [Tailwind CSS](https://tailwindcss.com)
-
-## 📄 License
-
-This project is licensed under the ISC License.
 
 ## 👨‍💻 Author
 
 Created with ❤️ for team collaboration and project management.
 
+For issues, questions, or feature requests, please create an issue in the repository.
+
 ---
 
 **Happy Collaborating! 🎉**
-
-For issues or questions, please create an issue in the repository.
