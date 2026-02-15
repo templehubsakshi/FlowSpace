@@ -17,7 +17,7 @@ const handleWorkspaceSocket = require('./sockets/workspaceSocket');
 const app = express();
 const server = http.createServer(app);
 
-// ✅ UPDATED: Allow all Vercel deployments dynamically
+// ✅ CORS configuration with Vercel wildcard
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
@@ -26,15 +26,13 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman)
     if (!origin) return callback(null, true);
     
-    // Check if origin is in allowed list
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
     
-    // ✅ NEW: Allow ALL Vercel preview deployments
+    // Allow all Vercel preview deployments
     if (origin && origin.endsWith('.vercel.app')) {
       console.log(`✅ Allowing Vercel origin: ${origin}`);
       return callback(null, true);
@@ -48,7 +46,17 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-app.options('*', cors());
+// ✅ FIXED: Handle preflight requests without wildcard
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 app.use(cookieParser());
 app.use(express.json());
@@ -85,6 +93,7 @@ io.on('connection', (socket) => {
   handleWorkspaceSocket(io, socket);
 });
 
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -92,6 +101,7 @@ app.use((req, res) => {
   });
 });
 
+// Error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err.stack);
   res.status(err.status || 500).json({
@@ -100,6 +110,7 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Database
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB connected'))
   .catch((err) => {
@@ -107,6 +118,7 @@ mongoose.connect(process.env.MONGO_URI)
     process.exit(1);
   });
 
+// Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
