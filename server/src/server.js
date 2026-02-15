@@ -10,7 +10,6 @@ const workspaceRoutes = require('./routes/workspaceRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 
-// Socket config
 const { initializeSocket } = require('./config/socket');
 const socketAuthMiddleware = require('./middelware/socketAuth');
 const handleWorkspaceSocket = require('./sockets/workspaceSocket');
@@ -18,50 +17,50 @@ const handleWorkspaceSocket = require('./sockets/workspaceSocket');
 const app = express();
 const server = http.createServer(app);
 
-// ✅ PRODUCTION-READY CORS CONFIGURATION
-const allowedOrigins = process.env.CLIENT_URL 
-  ? process.env.CLIENT_URL.split(',').map(url => url.trim())
-  : ['http://localhost:5173', 'http://localhost:3000'];
+// ✅ FIX: Proper CORS configuration
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://flow-space-black.vercel.app', // ✅ Your exact Vercel URL
+  'https://flow-space-b1f3frmhf-templehubsakshis-projects.vercel.app'
+];
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
+    // Allow requests with no origin (like mobile apps or Postman)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.warn(`❌ Blocked origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
+// ✅ Add this for preflight requests
+app.options('*', cors());
 
 app.use(cookieParser());
 app.use(express.json());
 
-// ✅ HEALTH CHECK ENDPOINT (for deployment platforms)
+// Health check
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK',
     message: 'FlowSpace API is running',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    timestamp: new Date().toISOString()
   });
 });
 
 app.get('/', (req, res) => {
   res.json({ 
     message: 'FlowSpace API',
-    version: '1.0.0',
-    endpoints: {
-      health: '/health',
-      auth: '/api/auth',
-      workspaces: '/api/workspaces',
-      tasks: '/api/tasks',
-      notifications: '/api/notifications'
-    }
+    version: '1.0.0'
   });
 });
 
@@ -80,7 +79,7 @@ io.on('connection', (socket) => {
   handleWorkspaceSocket(io, socket);
 });
 
-// ✅ 404 HANDLER
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -88,43 +87,26 @@ app.use((req, res) => {
   });
 });
 
-// ✅ GLOBAL ERROR HANDLER
+// Error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err.stack);
-  
   res.status(err.status || 500).json({
     success: false,
-    message: process.env.NODE_ENV === 'production' 
-      ? 'Internal Server Error' 
-      : err.message,
-    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
+    message: err.message || 'Internal Server Error'
   });
 });
 
-// ✅ DATABASE CONNECTION
+// Database
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB connected'))
   .catch((err) => {
     console.error('❌ MongoDB connection error:', err);
-    process.exit(1); // Exit if database connection fails
+    process.exit(1);
   });
 
-// ✅ GRACEFUL SHUTDOWN
-process.on('SIGTERM', () => {
-  console.log('👋 SIGTERM received, shutting down gracefully...');
-  server.close(() => {
-    console.log('💤 Server closed');
-    mongoose.connection.close(false, () => {
-      console.log('💤 MongoDB connection closed');
-      process.exit(0);
-    });
-  });
-});
-
-// ✅ START SERVER
+// Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Allowed origins: ${allowedOrigins.join(', ')}`);
 });
