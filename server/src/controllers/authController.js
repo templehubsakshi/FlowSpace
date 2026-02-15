@@ -6,13 +6,14 @@ const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
 };
 
-// Set cookie options
+// ✅ UPDATED: Cookie options for cross-domain
 const getCookieOptions = () => {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000  // 7 days
+    secure: process.env.NODE_ENV === 'production', // Must be true for sameSite: 'none'
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // ✅ CRITICAL FIX
+    maxAge: 7 * 24 * 60 * 60 * 1000,  // 7 days
+    path: '/'
   };
 };
 
@@ -33,10 +34,9 @@ exports.signup = async (req, res) => {
     const user = await User.create({ name, email, password });
     const token = generateToken(user._id);
 
-    // Set httpOnly cookie (for regular API requests)
+    // Set httpOnly cookie
     res.cookie('token', token, getCookieOptions());
 
-    // ⚠️ ALSO return token in response (for Socket.IO)
     res.status(201).json({
       success: true,
       message: 'Account created successfully',
@@ -46,7 +46,7 @@ exports.signup = async (req, res) => {
         email: user.email,
         createdAt: user.createdAt
       },
-      token: token  // ⚠️ ADD THIS - Return token
+      token: token
     });
   } catch (error) {
     console.error('Signup error:', error);
@@ -75,10 +75,9 @@ exports.login = async (req, res) => {
 
     const token = generateToken(user._id);
 
-    // Set httpOnly cookie (for regular API requests)
+    // Set httpOnly cookie
     res.cookie('token', token, getCookieOptions());
 
-    // ⚠️ ALSO return token in response (for Socket.IO)
     res.json({
       success: true,
       message: 'Login successful',
@@ -87,7 +86,7 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email
       },
-      token: token  // ⚠️ ADD THIS - Return token
+      token: token
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -100,7 +99,10 @@ exports.logout = (req, res) => {
   try {
     res.cookie('token', '', {
       httpOnly: true,
-      expires: new Date(0)
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      expires: new Date(0),
+      path: '/'
     });
 
     res.json({
