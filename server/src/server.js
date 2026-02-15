@@ -17,43 +17,49 @@ const handleWorkspaceSocket = require('./sockets/workspaceSocket');
 const app = express();
 const server = http.createServer(app);
 
-// ✅ FIX: Proper CORS configuration
+// ✅ UPDATED: Allow all Vercel deployments dynamically
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'https://flow-space-black.vercel.app', // ✅ Your exact Vercel URL
-  'https://flow-space-b1f3frmhf-templehubsakshis-projects.vercel.app'
+  'https://flow-space-black.vercel.app'
 ];
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or Postman)
+    // Allow requests with no origin (mobile apps, Postman)
     if (!origin) return callback(null, true);
     
+    // Check if origin is in allowed list
     if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`❌ Blocked origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+      return callback(null, true);
     }
+    
+    // ✅ NEW: Allow ALL Vercel preview deployments
+    if (origin && origin.endsWith('.vercel.app')) {
+      console.log(`✅ Allowing Vercel origin: ${origin}`);
+      return callback(null, true);
+    }
+    
+    console.warn(`❌ Blocked origin: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// ✅ Add this for preflight requests
 app.options('*', cors());
 
 app.use(cookieParser());
 app.use(express.json());
 
-// Health check
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK',
     message: 'FlowSpace API is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
@@ -70,7 +76,7 @@ app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/notifications', notificationRoutes);
 
-// ✅ Initialize Socket.IO
+// Initialize Socket.IO
 const io = initializeSocket(server);
 io.use(socketAuthMiddleware);
 
@@ -79,7 +85,6 @@ io.on('connection', (socket) => {
   handleWorkspaceSocket(io, socket);
 });
 
-// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -87,7 +92,6 @@ app.use((req, res) => {
   });
 });
 
-// Error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err.stack);
   res.status(err.status || 500).json({
@@ -96,7 +100,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Database
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB connected'))
   .catch((err) => {
@@ -104,9 +107,9 @@ mongoose.connect(process.env.MONGO_URI)
     process.exit(1);
   });
 
-// Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🔗 Allowed origins: ${allowedOrigins.join(', ')}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔗 Allowed origins: ${allowedOrigins.join(', ')} + all *.vercel.app`);
 });
