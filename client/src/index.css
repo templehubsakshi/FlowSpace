@@ -277,3 +277,334 @@ body.light-mode {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
 }
+
+/* ==========================================
+   🔥 FLOWSPACE UI FIXES - ADDED BELOW
+   ========================================== */
+
+/* ==========================================
+   FIX 1: Dashboard Layout - No Sidebar Overlap
+   ========================================== */
+
+/* Main dashboard container - ensures proper flex layout */
+.dashboard-main-container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Sidebar wrapper - prevents overlap */
+.sidebar-wrapper {
+  flex-shrink: 0;
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
+  height: 100vh;
+  overflow-y: auto;
+  position: relative;
+  z-index: 10;
+}
+
+/* Main content wrapper - takes remaining space */
+.main-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ==========================================
+   FIX 2: Kanban Board Layout
+   ========================================== */
+
+/* Kanban board container */
+.kanban-board-container {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 100%;
+  align-items: flex-start;
+}
+
+/* Individual kanban columns */
+.kanban-column {
+  min-width: 340px;
+  max-width: 360px;
+  width: 340px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Column header styling */
+.kanban-column-header {
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Column content area */
+.kanban-column-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 0.5rem;
+  min-height: 200px;
+  overflow-y: auto;
+}
+
+/* ==========================================
+   FIX 3: Hide Skeleton Cards Properly
+   ========================================== */
+
+/* Hide all skeleton cards by default */
+.skeleton-card,
+.kanban-skeleton {
+  display: none !important;
+}
+
+/* Show skeleton only when parent has loading class */
+.kanban-board-container.loading .skeleton-card,
+.kanban-board-container.loading .kanban-skeleton {
+  display: block !important;
+}
+
+/* Skeleton card styling */
+.skeleton-card {
+  background: linear-gradient(90deg, #334155 0%, #475569 50%, #334155 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  height: 140px;
+  margin-bottom: 0.75rem;
+}
+
+/* ==========================================
+   FIX 4: Task Card Styling
+   ========================================== */
+
+.task-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.task-card:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.dark .task-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.dark .task-card:hover {
+  border-color: #475569;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* ==========================================
+   FIX 5: Empty State Styling
+   ========================================== */
+
+.empty-state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  min-height: 300px;
+  text-align: center;
+  color: #64748b;
+}
+
+.dark .empty-state-container {
+  color: #94a3b8;
+}
+
+/* ==========================================
+   FIX 6: Column Status Colors
+   ========================================== */
+
+.status-todo .kanban-column-header {
+  background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+  color: white;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.status-in-progress .kanban-column-header {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: white;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+}
+
+.status-done .kanban-column-header {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: white;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* ==========================================
+   FIX 7: Scrollbar Styling for Kanban
+   ========================================== */
+
+.kanban-board-container::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.kanban-board-container::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.kanban-board-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #475569, #334155);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.kanban-board-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #64748b, #475569);
+  background-clip: padding-box;
+}
+
+.kanban-column-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.kanban-column-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.kanban-column-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.dark .kanban-column-content::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+/* ==========================================
+   FIX 8: Responsive Adjustments
+   ========================================== */
+
+@media (max-width: 1024px) {
+  .sidebar-wrapper {
+    width: 240px;
+    min-width: 240px;
+    max-width: 240px;
+  }
+  
+  .kanban-column {
+    min-width: 300px;
+    width: 300px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar-wrapper {
+    position: fixed;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .sidebar-wrapper.mobile-open {
+    transform: translateX(0);
+  }
+  
+  .main-content-wrapper {
+    margin-left: 0;
+  }
+  
+  .kanban-column {
+    min-width: 280px;
+    width: 280px;
+  }
+}
+
+/* ==========================================
+   FIX 9: Loading State
+   ========================================== */
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* ==========================================
+   FIX 10: Smooth Transitions
+   ========================================== */
+
+.kanban-column,
+.task-card,
+.kanban-column-header {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================
+   BONUS: Enhanced Card Hover Effects
+   ========================================== */
+
+.task-card-dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  cursor: grabbing;
+}
+
+.task-card-drag-over {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.custom-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.dark .custom-scroll::-webkit-scrollbar-thumb {
+  background: #475569;
+}

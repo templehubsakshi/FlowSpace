@@ -1,50 +1,65 @@
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown } from "lucide-react";
 
-export default function StatCard({ 
-  title, 
-  value, 
-  icon, 
-  color = 'blue',
+export default function StatCard({
+  title,
+  value,
+  icon,
+  color = "blue",
   trend,
-  subtitle 
+  subtitle,
 }) {
-  const colorClasses = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    orange: 'bg-orange-50 text-orange-600',
-    red: 'bg-red-50 text-red-600',
-    purple: 'bg-purple-50 text-purple-600'
-  };
-
-  const bgColors = {
-    blue: 'bg-blue-100',
-    green: 'bg-green-100',
-    orange: 'bg-orange-100',
-    red: 'bg-red-100',
-    purple: 'bg-purple-100'
+  const colors = {
+    blue: "from-blue-500 to-blue-600",
+    green: "from-emerald-500 to-emerald-600",
+    orange: "from-orange-500 to-orange-600",
+    red: "from-red-500 to-red-600",
+    purple: "from-purple-500 to-purple-600",
   };
 
   return (
-    <div className={`${colorClasses[color]} rounded-xl p-6 shadow-md hover:shadow-lg transition-all transform hover:-translate-y-1`}>
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-sm font-medium opacity-80 mb-1">{title}</p>
-          <p className="text-3xl font-bold mb-2">{value}</p>
+    <div
+      className={`
+        relative overflow-hidden
+        bg-gradient-to-br ${colors[color]}
+        text-white
+        rounded-2xl
+        p-6
+        shadow-xl
+        hover:shadow-2xl
+        transition-all duration-300
+        hover:-translate-y-1
+      `}
+    >
+      {/* subtle overlay */}
+      <div className="absolute inset-0 bg-white/5 backdrop-blur-sm" />
+
+      <div className="relative z-10 flex items-start justify-between">
+        <div>
+          <p className="text-sm font-medium opacity-90 mb-1">{title}</p>
+
+          <p className="text-4xl font-black tracking-tight mb-2">
+            {value}
+          </p>
+
           {subtitle && (
-            <p className="text-sm opacity-70">{subtitle}</p>
+            <p className="text-xs opacity-80">{subtitle}</p>
           )}
+
           {trend && (
             <div className="flex items-center gap-1 mt-2">
-              {trend.direction === 'up' ? (
-                <TrendingUp className="w-4 h-4" />
+              {trend.direction === "up" ? (
+                <TrendingUp className="w-4 h-4 text-green-200" />
               ) : (
-                <TrendingDown className="w-4 h-4" />
+                <TrendingDown className="w-4 h-4 text-red-200" />
               )}
-              <span className="text-sm font-medium">{trend.value}</span>
+              <span className="text-sm font-semibold">
+                {trend.value}
+              </span>
             </div>
           )}
         </div>
-        <div className={`${bgColors[color]} p-3 rounded-lg`}>
+
+        <div className="p-3 bg-white/20 rounded-xl backdrop-blur-md">
           {icon}
         </div>
       </div>
