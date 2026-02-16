@@ -1,5 +1,4 @@
 const Task = require('../models/Task');
-const Workspace = require('../models/Workspace');
 
 const onlineUsers = new Map();
 
@@ -125,23 +124,20 @@ const handleWorkspaceSocket = (io, socket) => {
     });
   });
 
+  // ✅ FIXED: Just broadcast, don't save again (HTTP endpoint already saved it)
   socket.on('comment:add', async (data) => {
     try {
       const { workspaceId, taskId, comment } = data;
-      const task = await Task.findById(taskId);
-      if (!task) return;
-
-      task.comments.push({ user: socket.userId, text: comment });
-      await task.save();
-
+      
+      // ✅ Comment already saved by HTTP endpoint
+      // Just broadcast to other users in workspace
       socket.to(`workspace:${workspaceId}`).emit('comment:added', { 
         taskId, 
-        comment: { 
-          text: comment, 
-          user: { name: socket.user.name } 
-        }, 
+        comment,  // Send the full comment object
         addedBy: socket.user.name 
       });
+      
+      console.log(`📢 Broadcast comment:added for task ${taskId} in workspace ${workspaceId}`);
     } catch (error) {
       console.error('Error in comment:add', error);
     }

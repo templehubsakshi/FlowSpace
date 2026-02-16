@@ -1,17 +1,94 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { X, Send } from "lucide-react";
+import MentionDropdown from "./MentionDropdown";
 
-const TaskDetailsModal = ({ task, onClose, onAddComment }) => {
+const TaskDetailsModal = ({ task, onClose, onAddComment, workspaceMembers = [] }) => {
   const [comment, setComment] = useState("");
+  
+  // ✅ Mention functionality state
+  const [showMentionDropdown, setShowMentionDropdown] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionStartIndex, setMentionStartIndex] = useState(-1);
+  const [mentionedUsers, setMentionedUsers] = useState([]); // ✅ TRACK MENTIONED USERS
+  const inputRef = useRef(null);
 
   if (!task) return null;
+
+  // ✅ Handle text input and detect @ mentions
+  const handleCommentChange = (e) => {
+    const text = e.target.value;
+    setComment(text);
+
+    const cursorPos = e.target.selectionStart;
+    const textBeforeCursor = text.slice(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
+
+    if (lastAtIndex !== -1) {
+      const textAfterAt = textBeforeCursor.slice(lastAtIndex + 1);
+      
+      // Check if there's whitespace after @ (if so, cancel mention)
+      if (!textAfterAt.includes(" ") && !textAfterAt.includes("\n")) {
+        setShowMentionDropdown(true);
+        setMentionQuery(textAfterAt);
+        setMentionStartIndex(lastAtIndex);
+        return;
+      }
+    }
+
+    // No valid mention found
+    setShowMentionDropdown(false);
+    setMentionQuery("");
+    setMentionStartIndex(-1);
+  };
+
+  // ✅ Handle member selection from dropdown
+  const handleMentionSelect = (member) => {
+    if (mentionStartIndex === -1) return;
+
+    // Replace @query with @MemberName
+    const beforeMention = comment.slice(0, mentionStartIndex);
+    const afterMention = comment.slice(inputRef.current.selectionStart);
+    const newComment = `${beforeMention}@${member.name} ${afterMention}`;
+
+    setComment(newComment);
+    setShowMentionDropdown(false);
+    setMentionQuery("");
+    setMentionStartIndex(-1);
+
+    // ✅ Track mentioned user (avoid duplicates)
+    if (!mentionedUsers.find(u => u._id === member._id)) {
+      setMentionedUsers([...mentionedUsers, member]);
+    }
+
+    // Refocus input
+    setTimeout(() => {
+      inputRef.current?.focus();
+      const newCursorPos = beforeMention.length + member.name.length + 2; // +2 for @ and space
+      inputRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!comment.trim()) return;
 
-    onAddComment(task._id, comment);
+    // ✅ Extract user IDs from mentioned users
+    const mentionIds = mentionedUsers.map(u => u._id);
+
+    console.log('📤 Sending comment with mentions:', {
+      taskId: task._id,
+      text: comment,
+      mentions: mentionIds
+    });
+
+    // ✅ Send comment with mentions array
+    onAddComment(task._id, comment, mentionIds);
+    
     setComment("");
+    setMentionedUsers([]); // ✅ Clear mentions
+    setShowMentionDropdown(false);
+    setMentionQuery("");
+    setMentionStartIndex(-1);
   };
 
   return (
@@ -105,40 +182,67 @@ const TaskDetailsModal = ({ task, onClose, onAddComment }) => {
               )}
             </div>
 
-            {/* Add Comment */}
-            <form
-              onSubmit={handleSubmit}
-              className="flex items-center gap-3 mt-4"
-            >
-              <input
-                type="text"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Write a comment..."
-                className="flex-1 px-4 py-2 
-                           bg-white dark:bg-slate-800
-                           border border-slate-300 dark:border-slate-600
-                           rounded-lg
-                           focus:ring-2 focus:ring-blue-500 
-                           focus:border-transparent
-                           text-slate-900 dark:text-slate-100"
-              />
+            {/* Add Comment - WITH MENTION SUPPORT ✅ */}
+            <form onSubmit={handleSubmit} className="mt-4">
+              <div className="relative">
+                <div className="flex items-center gap-3">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={comment}
+                    onChange={handleCommentChange}
+                    placeholder="Write a comment... (Type @ to mention)"
+                    className="flex-1 px-4 py-2 
+                               bg-white dark:bg-slate-800
+                               border border-slate-300 dark:border-slate-600
+                               rounded-lg
+                               focus:ring-2 focus:ring-blue-500 
+                               focus:border-transparent
+                               text-slate-900 dark:text-slate-100"
+                  />
 
-              <button
-                type="submit"
-                className="px-4 py-2 
-                           bg-blue-600 hover:bg-blue-700 
-                           text-white 
-                           rounded-lg 
-                           transition 
-                           disabled:opacity-50 
-                           flex items-center gap-2 
-                           shadow-sm"
-                disabled={!comment.trim()}
-              >
-                <Send size={16} />
-                Send
-              </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 
+                               bg-blue-600 hover:bg-blue-700 
+                               text-white 
+                               rounded-lg 
+                               transition 
+                               disabled:opacity-50 
+                               flex items-center gap-2 
+                               shadow-sm"
+                    disabled={!comment.trim()}
+                  >
+                    <Send size={16} />
+                    Send
+                  </button>
+                </div>
+
+                {/* ✅ MENTION DROPDOWN */}
+                {showMentionDropdown && (
+                  <MentionDropdown
+                    query={mentionQuery}
+                    members={workspaceMembers}
+                    onSelect={handleMentionSelect}
+                    onClose={() => setShowMentionDropdown(false)}
+                  />
+                )}
+
+                {/* ✅ Show mentioned users */}
+                {mentionedUsers.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <span className="text-xs text-slate-500">Mentioning:</span>
+                    {mentionedUsers.map(u => (
+                      <span 
+                        key={u._id} 
+                        className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full"
+                      >
+                        @{u.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </form>
           </div>
         </div>

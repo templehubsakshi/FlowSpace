@@ -1,7 +1,6 @@
 import { useWorkspaceSocket } from '../hooks/useWorkspaceSocket';
 import SearchBar from './SearchBar';
 import FilterPanel from './FilterPanel';
-// import KanbanBoardSkeleton from './KanbanBoardSkeleton';
 import LoadingSpinner from './LoadingSpinner';
 import { useEffect, useState, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -21,7 +20,8 @@ import {
   moveTask,
   rollbackMoveTask,
   setSelectedTask,
-  deleteTask
+  deleteTask,
+  addComment
 } from '../redux/slices/taskSlice';
 import KanbanColumn from './KanbanColumn';
 import TaskCard from './TaskCard';
@@ -31,17 +31,6 @@ import { Wifi, WifiOff } from 'lucide-react';
 const CreateTaskModal = lazy(() => import('./CreateTaskModal'));
 const TaskDetailModal = lazy(() => import('./TaskDetailModal'));
 
-/**
- * 🎯 FINAL PRODUCTION KanbanBoard
- * 
- * ✅ Dark mode support
- * ✅ Professional skeleton loading
- * ✅ Real-time updates via Socket.io
- * ✅ Optimistic UI updates
- * ✅ Better error handling
- * ✅ Accessibility compliant
- * ✅ Mobile responsive
- */
 export default function KanbanBoard() {
   const dispatch = useDispatch();
 
@@ -49,7 +38,6 @@ export default function KanbanBoard() {
   const workspaceId = currentWorkspace?._id;
   const { socket, isConnected } = useWorkspaceSocket(workspaceId);
   
-  // ✅ FIX: Prefix unused variables with underscore to match ESLint rule /^[A-Z_]/u
   const { tasks, selectedTask } = useSelector((state) => state.tasks);
 
   const [activeTask, setActiveTask] = useState(null);
@@ -61,6 +49,15 @@ export default function KanbanBoard() {
     statuses: [],
     assignee: ''
   });
+
+  // ✅ Extract workspace members for mention dropdown
+  const workspaceMembers = useMemo(() => 
+    currentWorkspace?.members?.map(m => ({
+      _id: m.user?._id || m._id,
+      name: m.user?.name || m.name
+    })) || [],
+    [currentWorkspace?.members]
+  );
 
   // Sensors
   const sensors = useSensors(
@@ -231,6 +228,32 @@ export default function KanbanBoard() {
     }
   }, [dispatch, socket, isConnected, workspaceId]);
 
+  // ✅ FIXED: Add comment handler with mentions
+  const handleAddComment = useCallback(async (taskId, commentText, mentions = []) => {
+    const toastId = toast.loading('Adding comment...');
+    
+    const result = await dispatch(addComment({
+      taskId,
+      text: commentText,
+      mentions  // ✅ Include mentions array
+    }));
+
+    if (result.type === 'tasks/addComment/fulfilled') {
+      toast.success('Comment added!', { id: toastId });
+      
+      // ✅ FIXED: Send only the comment object, not entire payload
+      if (socket && isConnected) {
+        socket.emit('comment:add', {
+          workspaceId,
+          taskId,
+          comment: result.payload.comment  // ✅ Only the comment object!
+        });
+      }
+    } else {
+      toast.error('Failed to add comment', { id: toastId });
+    }
+  }, [dispatch, socket, isConnected, workspaceId]);
+
   // ===== RENDER =====
   return (
     <div className="
@@ -344,6 +367,8 @@ export default function KanbanBoard() {
           <TaskDetailModal
             task={selectedTask}
             onClose={() => dispatch(setSelectedTask(null))}
+            onAddComment={handleAddComment}
+            workspaceMembers={workspaceMembers}
           />
         )}
       </Suspense>

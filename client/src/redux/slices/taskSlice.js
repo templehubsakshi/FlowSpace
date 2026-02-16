@@ -164,6 +164,34 @@ const taskSlice = createSlice({
       }
     },
     
+    // ✅ NEW: Add comment from socket (real-time update)
+    addCommentFromSocket: (state, action) => {
+      const { taskId, comment } = action.payload;
+      
+      // Update selectedTask
+      if (state.selectedTask?._id === taskId) {
+        const exists = state.selectedTask.comments?.some(c => c._id === comment._id);
+        if (!exists) {
+          if (!state.selectedTask.comments) state.selectedTask.comments = [];
+          state.selectedTask.comments.push(comment);
+        }
+      }
+      
+      // Update task in arrays
+      Object.keys(state.tasks).forEach(status => {
+        const taskIndex = state.tasks[status].findIndex(t => t._id === taskId);
+        if (taskIndex !== -1) {
+          const exists = state.tasks[status][taskIndex].comments?.some(c => c._id === comment._id);
+          if (!exists) {
+            if (!state.tasks[status][taskIndex].comments) {
+              state.tasks[status][taskIndex].comments = [];
+            }
+            state.tasks[status][taskIndex].comments.push(comment);
+          }
+        }
+      });
+    },
+    
     // Optimistic update for drag-and-drop
     optimisticMoveTask: (state, action) => {
       const { taskId: _taskId, sourceStatus, destinationStatus, sourceIndex, destinationIndex } = action.payload;
@@ -260,7 +288,6 @@ const taskSlice = createSlice({
     // Delete task
     builder
       .addCase(deleteTask.fulfilled, (state, action) => {
-        // ✅ FIX: Removed unused taskId variable
         const deletedTaskId = action.payload;
         
         // Remove from all status arrays
@@ -276,7 +303,6 @@ const taskSlice = createSlice({
     // Move task
     builder
       .addCase(moveTask.pending, () => {
-        // ✅ FIX: Removed unused state parameter
         // Task already moved optimistically
       })
       .addCase(moveTask.fulfilled, (state, action) => {
@@ -296,14 +322,35 @@ const taskSlice = createSlice({
         state.error = action.payload;
       });
     
-    // Add comment
+    // ✅ FIXED: Add comment - Update BOTH selectedTask AND tasks array
     builder
       .addCase(addComment.fulfilled, (state, action) => {
         const { taskId, comment } = action.payload;
         
+        // ✅ Update selectedTask
         if (state.selectedTask?._id === taskId) {
-          state.selectedTask.comments.push(comment);
+          // Check for duplicates
+          const exists = state.selectedTask.comments?.some(c => c._id === comment._id);
+          if (!exists) {
+            if (!state.selectedTask.comments) state.selectedTask.comments = [];
+            state.selectedTask.comments.push(comment);
+          }
         }
+        
+        // ✅ ALSO update task in the tasks array (THIS WAS MISSING!)
+        Object.keys(state.tasks).forEach(status => {
+          const taskIndex = state.tasks[status].findIndex(t => t._id === taskId);
+          if (taskIndex !== -1) {
+            // Check for duplicates
+            const exists = state.tasks[status][taskIndex].comments?.some(c => c._id === comment._id);
+            if (!exists) {
+              if (!state.tasks[status][taskIndex].comments) {
+                state.tasks[status][taskIndex].comments = [];
+              }
+              state.tasks[status][taskIndex].comments.push(comment);
+            }
+          }
+        });
       });
     
     // Delete comment
@@ -325,9 +372,10 @@ export const {
   clearError, 
   optimisticMoveTask,
   rollbackMoveTask,
-  addTaskFromSocket,      // ✅ NEW: Export socket actions
-  updateTaskFromSocket,   // ✅ NEW
-  deleteTaskFromSocket    // ✅ NEW
+  addTaskFromSocket,
+  updateTaskFromSocket,
+  deleteTaskFromSocket,
+  addCommentFromSocket  // ✅ NEW: Export for socket events
 } = taskSlice.actions;
 
 export default taskSlice.reducer;

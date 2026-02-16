@@ -8,29 +8,21 @@ import { useState, useEffect, useRef, useMemo } from 'react';
  *   members    — array of workspace members to search through. Shape: [{ _id, name }]
  *   onSelect   — callback when user picks a member. Receives the full member object.
  *   onClose    — callback to hide the dropdown (e.g. when user presses Escape).
- * 
- * This component handles:
- *   - Filtering the member list based on query
- *   - Keyboard navigation (arrow keys + Enter)
- *   - Closing on Escape
- *   - Auto-scrolling the highlighted item into view
  */
 export default function MentionDropdown({ query, members, onSelect, onClose }) {
   const listRef = useRef(null);
   const highlightedRef = useRef(null);
 
   // Filter members whose name starts with the query (case-insensitive)
-  // If query is empty string (user just typed @), show everyone
   const filtered = useMemo(() => 
     members.filter((member) =>
       member.name.toLowerCase().startsWith(query.toLowerCase())
     ), [members, query]
   );
 
-  // ✅ FIX: Initialize to 0 and clamp within bounds inline
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   
-  // Ensure index is always valid (clamp during state updates instead of in useEffect)
+  // Ensure index is always valid
   const safeHighlightedIndex = Math.min(highlightedIndex, Math.max(0, filtered.length - 1));
 
   // Auto-scroll the highlighted item into view
@@ -77,17 +69,17 @@ export default function MentionDropdown({ query, members, onSelect, onClose }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [filtered, safeHighlightedIndex, onSelect, onClose]);
 
-  // Nothing to show — don't render anything
+  // Nothing to show
   if (filtered.length === 0) return null;
 
   return (
     <div
       ref={listRef}
-      className="absolute bottom-full left-0 mb-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden"
+      className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg z-[60] overflow-hidden"
     >
-      {/* Small label at the top so the user knows what's happening */}
-      <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-100">
-        <p className="text-xs text-gray-500 font-medium">Mention a member</p>
+      {/* Header */}
+      <div className="px-3 py-1.5 bg-gray-50 dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700">
+        <p className="text-xs text-gray-500 dark:text-slate-400 font-medium">Mention a member</p>
       </div>
 
       {/* Member list */}
@@ -99,12 +91,18 @@ export default function MentionDropdown({ query, members, onSelect, onClose }) {
             onClick={() => onSelect(member)}
             className={`
               flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors
-              ${index === safeHighlightedIndex ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}
+              ${index === safeHighlightedIndex 
+                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' 
+                : 'text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'
+              }
             `}
           >
             {/* Avatar circle with first letter */}
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
-              ${index === safeHighlightedIndex ? 'bg-blue-200 text-blue-700' : 'bg-gray-200 text-gray-600'}
+              ${index === safeHighlightedIndex 
+                ? 'bg-blue-200 dark:bg-blue-700 text-blue-700 dark:text-blue-200' 
+                : 'bg-gray-200 dark:bg-slate-600 text-gray-600 dark:text-slate-300'
+              }
             `}>
               {member.name.charAt(0).toUpperCase()}
             </div>
@@ -115,9 +113,9 @@ export default function MentionDropdown({ query, members, onSelect, onClose }) {
         ))}
       </ul>
 
-      {/* Keyboard hint at the bottom */}
-      <div className="px-3 py-1.5 bg-gray-50 border-t border-gray-100">
-        <p className="text-xs text-gray-400">↑↓ navigate · Enter select · Esc cancel</p>
+      {/* Keyboard hint */}
+      <div className="px-3 py-1.5 bg-gray-50 dark:bg-slate-900 border-t border-gray-100 dark:border-slate-700">
+        <p className="text-xs text-gray-400 dark:text-slate-500">↑↓ navigate · Enter select · Esc cancel</p>
       </div>
     </div>
   );

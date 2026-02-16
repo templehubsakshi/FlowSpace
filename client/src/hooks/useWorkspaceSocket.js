@@ -1,105 +1,117 @@
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
-import { useSocket } from '../hooks/Usesocket'
-import toast from 'react-hot-toast';
-
-// ✅ Import socket-specific actions (NOT async thunks)
-import { 
+import { useSocket } from './Usesocket';
+import {
   addTaskFromSocket,
   updateTaskFromSocket,
-  deleteTaskFromSocket
+  deleteTaskFromSocket,
+  addCommentFromSocket
 } from '../redux/slices/taskSlice';
 
+/**
+ * useWorkspaceSocket Hook
+ * 
+ * Listens for real-time workspace events via Socket.IO
+ * Updates Redux store for tasks, comments, and user presence
+ */
 export const useWorkspaceSocket = (workspaceId) => {
-  const { socket, isConnected, setOnlineUsers } = useSocket();
   const dispatch = useDispatch();
+  const { socket, isConnected } = useSocket();
 
   useEffect(() => {
-    if (!socket || !isConnected || !workspaceId) return;
+    if (!socket || !workspaceId) return;
 
-    // Join workspace room
+    console.log(`🔌 Joining workspace: ${workspaceId}`);
     socket.emit('workspace:join', workspaceId);
 
-    // Listen for online users
-    socket.on('workspace:online-users', (users) => {
-      setOnlineUsers(users);
-    });
-
-    // Listen for user joined
-    socket.on('user:joined', (data) => {
-      toast(`${data.userName} joined workspace`, {
-        icon: '👋',
-        duration: 2000
-      });
-      setOnlineUsers((prev) => [...prev, data]);
-    });
-
-    // Listen for user left
-    socket.on('user:left', (data) => {
-      toast(`${data.userName} left workspace`, {
-        icon: '👋',
-        duration: 2000
-      });
-      setOnlineUsers((prev) => 
-        prev.filter(u => u.userId !== data.userId)
-      );
-    });
-
-    // ✅ FIXED: Listen for task created (use socket action, not async thunk)
-    socket.on('task:created', (data) => {
-      dispatch(addTaskFromSocket(data.task)); // Just add to Redux, no API call
-      toast.success(`${data.createdBy} created a task`, {
-        duration: 2000
-      });
-    });
-
-    // ✅ FIXED: Listen for task updated (use socket action)
-    socket.on('task:updated', (data) => {
-      // Reconstruct the full task update
-      const updatedTask = {
-        _id: data.taskId,
-        ...data.updates
-      };
-      dispatch(updateTaskFromSocket(updatedTask));
-      toast(`${data.updatedBy} updated a task`, {
-        icon: '✏️',
-        duration: 2000
-      });
-    });
-
-    // ✅ FIXED: Listen for task moved (use socket action)
-    socket.on('task:moved', (data) => {
-      const updatedTask = {
-        _id: data.taskId,
-        status: data.newStatus
-      };
-      dispatch(updateTaskFromSocket(updatedTask));
-      toast(`${data.movedBy} moved a task`, {
-        icon: '🔄',
-        duration: 2000
-      });
-    });
-
-    // ✅ FIXED: Listen for task deleted (use socket action)
-    socket.on('task:deleted', (data) => {
-      dispatch(deleteTaskFromSocket(data.taskId)); // Just remove from Redux
-      toast.error(`${data.deletedBy} deleted a task`, {
-        duration: 2000
-      });
-    });
-
-    // Cleanup
-    return () => {
-      socket.emit('workspace:leave', workspaceId);
-      socket.off('workspace:online-users');
-      socket.off('user:joined');
-      socket.off('user:left');
-      socket.off('task:created');
-      socket.off('task:updated');
-      socket.off('task:moved');
-      socket.off('task:deleted');
+    // ===== TASK EVENTS =====
+    
+    // Task created by another user
+    const handleTaskCreated = (data) => {
+      console.log('✨ Task created:', data.task.title);
+      dispatch(addTaskFromSocket(data.task));
     };
-  }, [socket, isConnected, workspaceId, dispatch, setOnlineUsers]);
+
+    // Task updated by another user
+    const handleTaskUpdated = (data) => {
+      console.log('🔄 Task updated:', data.taskId);
+      dispatch(updateTaskFromSocket(data.updates));
+    };
+
+    // Task moved by another user
+    const handleTaskMoved = (data) => {
+      console.log('📦 Task moved:', data.taskId, 'to', data.newStatus);
+      // Task move is handled by the drag-and-drop system
+      // You might want to refresh or show a notification here
+    };
+
+    // Task deleted by another user
+    const handleTaskDeleted = (data) => {
+      console.log('🗑️ Task deleted:', data.taskId);
+      dispatch(deleteTaskFromSocket(data.taskId));
+    };
+
+    // ===== COMMENT EVENTS =====
+    
+    // ✅ Comment added by another user (real-time update)
+    const handleCommentAdded = (data) => {
+      console.log('💬 Comment added to task:', data.taskId);
+      dispatch(addCommentFromSocket({
+        taskId: data.taskId,
+        comment: data.comment
+      }));
+    };
+
+    // Comment typing indicator
+    const handleCommentTyping = (data) => {
+      console.log('✍️ User typing:', data.userName);
+      // You can show a typing indicator in the UI
+    };
+
+    // ===== USER PRESENCE =====
+    
+    const handleUserJoined = (data) => {
+      console.log('👋 User joined:', data.userName);
+    };
+
+    const handleUserLeft = (data) => {
+      console.log('👋 User left:', data.userName);
+    };
+
+    const handleOnlineUsers = (users) => {
+      console.log('👥 Online users:', users.length);
+    };
+
+    // ===== REGISTER EVENT LISTENERS =====
+    
+    socket.on('task:created', handleTaskCreated);
+    socket.on('task:updated', handleTaskUpdated);
+    socket.on('task:moved', handleTaskMoved);
+    socket.on('task:deleted', handleTaskDeleted);
+    socket.on('comment:added', handleCommentAdded);  // ✅ Listen for comments
+    socket.on('comment:typing', handleCommentTyping);
+    socket.on('user:joined', handleUserJoined);
+    socket.on('user:left', handleUserLeft);
+    socket.on('workspace:online-users', handleOnlineUsers);
+
+    // ===== CLEANUP =====
+    
+    return () => {
+      console.log(`🔌 Leaving workspace: ${workspaceId}`);
+      
+      socket.emit('workspace:leave', workspaceId);
+      
+      socket.off('task:created', handleTaskCreated);
+      socket.off('task:updated', handleTaskUpdated);
+      socket.off('task:moved', handleTaskMoved);
+      socket.off('task:deleted', handleTaskDeleted);
+      socket.off('comment:added', handleCommentAdded);
+      socket.off('comment:typing', handleCommentTyping);
+      socket.off('user:joined', handleUserJoined);
+      socket.off('user:left', handleUserLeft);
+      socket.off('workspace:online-users', handleOnlineUsers);
+    };
+  }, [socket, workspaceId, dispatch]);
 
   return { socket, isConnected };
 };
