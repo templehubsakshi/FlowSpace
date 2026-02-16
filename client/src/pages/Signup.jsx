@@ -15,13 +15,6 @@ export default function Signup() {
 
   const { isLoading, error, isAuthenticated } = useSelector((state) => state.auth);
 
-  // ✅ Clear localStorage on mount (prevents old session issues)
-  useEffect(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('currentWorkspaceId');
-  }, []);
-
   useEffect(() => {
     if (error) {
       toast.error(error);
@@ -30,9 +23,8 @@ export default function Signup() {
   }, [error, dispatch]);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (isAuthenticated && token) {
-      navigate('/dashboard', { replace: true });
+    if (isAuthenticated) {
+      navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
 
@@ -41,13 +33,6 @@ export default function Signup() {
 
     if (!name || !email || !password) {
       toast.error('Please fill all fields');
-      return;
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast.error('Please enter a valid email');
       return;
     }
 
@@ -64,114 +49,110 @@ export default function Signup() {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-[#0b1020] overflow-hidden px-4">
-
-      {/* Neon Background Glows */}
-      <div className="absolute -left-32 top-1/2 w-[450px] h-[450px] bg-purple-600/30 blur-3xl rounded-full animate-pulse"></div>
-      <div className="absolute -right-32 top-1/2 w-[450px] h-[450px] bg-indigo-500/30 blur-3xl rounded-full animate-pulse"></div>
-
-      {/* Card */}
-      <div className="relative w-full max-w-md sm:max-w-lg bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_0_60px_rgba(128,0,255,0.5)] rounded-2xl p-8 sm:p-10 space-y-8">
-
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="flex justify-center">
-            <div className="p-5 sm:p-6 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 shadow-[0_0_20px_rgba(128,0,255,0.7)]">
-              <UserPlus className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-emerald-100 via-teal-50 to-cyan-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="w-full max-w-md">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 p-10">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-xl mb-5">
+              <UserPlus className="w-10 h-10 text-white" />
             </div>
+
+            <h1 className="text-4xl font-black bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">
+              Join FlowSpace
+            </h1>
+
+            <p className="text-slate-600 dark:text-slate-400 text-lg font-medium">
+              Create your account
+            </p>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight drop-shadow-lg">
-            Join FlowSpace
-          </h1>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Doe"
+                disabled={isLoading}
+                className="w-full px-5 py-4 rounded-xl bg-slate-50 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-emerald-500 dark:focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none disabled:opacity-50"
+              />
+            </div>
 
-          <p className="text-gray-300 text-sm sm:text-base">
-            Create your account and start managing your workspace
-          </p>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="john@example.com"
+                disabled={isLoading}
+                className="w-full px-5 py-4 rounded-xl bg-slate-50 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-emerald-500 dark:focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none disabled:opacity-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <Lock className="w-4 h-4" />
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                disabled={isLoading}
+                className="w-full px-5 py-4 rounded-xl bg-slate-50 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-emerald-500 dark:focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none disabled:opacity-50"
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 ml-1">
+                Minimum 6 characters
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full group relative px-6 py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+            >
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                {isLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Creating account...
+                  </>
+                ) : (
+                  <>
+                    Create Account
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </span>
+            </button>
+          </form>
+
+          <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
+            <p className="text-center text-slate-600 dark:text-slate-400">
+              Already have an account?{' '}
+              <Link
+                to="/login"
+                className="font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 underline decoration-2 underline-offset-4 hover:underline-offset-8 transition-all"
+              >
+                Sign in
+              </Link>
+            </p>
+          </div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-
-          {/* Name */}
-          <div className="space-y-2">
-            <label className="text-sm text-gray-300 flex items-center gap-2">
-              <User className="w-4 h-4" /> Full Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe"
-              disabled={isLoading}
-              className="w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-white/50 border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 transition disabled:opacity-50"
-            />
-          </div>
-
-          {/* Email */}
-          <div className="space-y-2">
-            <label className="text-sm text-gray-300 flex items-center gap-2">
-              <Mail className="w-4 h-4" /> Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="john@example.com"
-              disabled={isLoading}
-              className="w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-white/50 border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 transition disabled:opacity-50"
-            />
-          </div>
-
-          {/* Password */}
-          <div className="space-y-2">
-            <label className="text-sm text-gray-300 flex items-center gap-2">
-              <Lock className="w-4 h-4" /> Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              disabled={isLoading}
-              className="w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-white/50 border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 transition disabled:opacity-50"
-            />
-            <p className="text-xs text-gray-400 mt-1 ml-1">Minimum 6 characters</p>
-          </div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-3 rounded-xl font-semibold tracking-wide text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition duration-300 shadow-[0_0_20px_rgba(128,0,255,0.7)] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
-          >
-            {isLoading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                Creating account...
-              </>
-            ) : (
-              <>
-                Create Account
-                <ArrowRight className="w-5 h-5" />
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Login Link */}
-        <p className="text-sm text-center text-gray-400 pt-2">
-          Already have an account?{' '}
-          <Link to="/login" className="text-purple-400 hover:text-purple-300 underline decoration-2 underline-offset-4 transition">
-            Sign in
-          </Link>
+        <p className="text-center text-slate-500 dark:text-slate-400 text-sm mt-6">
+          © 2026 FlowSpace. All rights reserved.
         </p>
-
       </div>
-
-      <p className="absolute bottom-4 text-center text-gray-500 text-xs">
-        © 2026 FlowSpace. All rights reserved.
-      </p>
     </div>
   );
 }
