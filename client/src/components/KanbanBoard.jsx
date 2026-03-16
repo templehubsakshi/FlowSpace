@@ -1234,7 +1234,6 @@ const DonutTooltip = ({ active, payload }) => {
 };
 
 /* ─── Stat card ─── */
- 
 function StatCard({ label, value, color, iconBg, Icon: IconComp }) {
   const T = useThemeColors();
   const [hov, setHov] = useState(false);
@@ -1286,6 +1285,12 @@ export default function KanbanBoard({
 }) {
   const T = useThemeColors();
   const dispatch = useDispatch();
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 900 : false);
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 900);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
   const { currentWorkspace } = useSelector(s => s.workspace);
   const workspaceId = currentWorkspace?._id;
   const { socket, isConnected } = useWorkspaceSocket(workspaceId);
@@ -1461,12 +1466,12 @@ export default function KanbanBoard({
         </DndContext>
       </div>
 
-      {/* ── Right panel ── */}
+      {/* ── Right panel — hidden on mobile ── */}
       <aside style={{
-        width: 280, minWidth: 280,
-        borderLeft: `1px solid ${T.border}`,
+        width: isMobile ? 0 : 280, minWidth: isMobile ? 0 : 280,
+        borderLeft: isMobile ? 'none' : `1px solid ${T.border}`,
         background: T.surface,
-        display: 'flex', flexDirection: 'column',
+        display: isMobile ? 'none' : 'flex', flexDirection: 'column',
         padding: '18px 16px 20px', gap: 12,
         overflowY: 'auto', flexShrink: 0,
       }}>

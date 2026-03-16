@@ -13,6 +13,17 @@ import {
 } from "lucide-react";
 import { useThemeColors } from "../hooks/useTheme";
 
+// ─── Breakpoint hook ─────────────────────────────────────────
+function useWidth() {
+  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  useEffect(() => {
+    const h = () => setW(window.innerWidth);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return w;
+}
+
 function buildWeeklyData(tasks) {
   const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
   const today = new Date();
@@ -102,7 +113,6 @@ function ProgressRow({ label, count, total, color }) {
 }
 
 function Avatar({ name = "?", size = 28 }) {
-  const T = useThemeColors();
   const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
   const palette = ["#6366f1","#10b981","#f59e0b","#a855f7","#ef4444","#06b6d4","#f97316"];
   const idx = name.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % palette.length;
@@ -119,7 +129,7 @@ function EmptyAnalytics() {
   return (
     <div style={{ background: T.surfaceCard, border: `1px solid ${T.border}`, borderRadius: 16, boxShadow: "0 6px 28px rgba(0,0,0,0.08)", padding: "72px 24px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
       <div style={{ width: 60, height: 60, borderRadius: 16, background: "rgba(99,102,241,0.10)", border: "1px solid rgba(99,102,241,0.20)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 24px rgba(99,102,241,0.15)" }}>
-        <TrendingUp size={28} color={T.indigo2} />
+        <TrendingUp size={28} color="#818cf8" />
       </div>
       <h3 style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.03em", color: T.text }}>No analytics yet</h3>
       <p style={{ fontSize: 13.5, color: T.muted }}>Create a few tasks to unlock insights.</p>
@@ -129,6 +139,11 @@ function EmptyAnalytics() {
 
 export default function StatisticsPanel() {
   const T = useThemeColors();
+  const width = useWidth();
+  const isMobile = width < 640;
+  const isTablet = width >= 640 && width < 1024;
+  const isSmall = width < 1024;
+
   const dispatch   = useDispatch();
   const { tasks }  = useSelector(s => s.tasks);
   const statistics = useSelector(s => s.statistics);
@@ -163,23 +178,24 @@ export default function StatisticsPanel() {
   if (statistics.totalTasks === 0) return <EmptyAnalytics />;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 14 : 20 }}>
 
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: "-0.03em", color: T.text, lineHeight: 1.2, margin: 0 }}>Workspace Analytics</h1>
+          <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: isMobile ? 18 : 24, letterSpacing: "-0.03em", color: T.text, lineHeight: 1.2, margin: 0 }}>Workspace Analytics</h1>
           <p style={{ fontSize: 13, color: T.muted, marginTop: 4 }}>{statistics.totalTasks} tasks · {statistics.tasksByAssignee?.length || 0} contributors</p>
         </div>
-        <div style={{ display: "flex", background: T.s2, border: `1px solid ${T.border2}`, borderRadius: 12, padding: 4, gap: 2 }}>
+        {/* Range buttons — scroll on mobile */}
+        <div style={{ display: "flex", background: T.s2, border: `1px solid ${T.border2}`, borderRadius: 12, padding: 4, gap: 2, overflowX: "auto", flexShrink: 0 }}>
           {ranges.map(r => (
-            <button key={r} onClick={() => setRange(r)} style={{ padding: "6px 13px", borderRadius: 9, border: "none", cursor: "pointer", background: range===r ? "linear-gradient(135deg,#6366f1,#818cf8)" : "transparent", color: range===r ? "white" : T.muted, fontSize: 12, fontWeight: 600, boxShadow: range===r ? "0 2px 12px rgba(99,102,241,0.38)" : "none", transition: "all 0.15s", fontFamily: "'Inter', sans-serif" }}>{r}</button>
+            <button key={r} onClick={() => setRange(r)} style={{ padding: isMobile ? "5px 9px" : "6px 13px", borderRadius: 9, border: "none", cursor: "pointer", background: range===r ? "linear-gradient(135deg,#6366f1,#818cf8)" : "transparent", color: range===r ? "white" : T.muted, fontSize: isMobile ? 11 : 12, fontWeight: 600, boxShadow: range===r ? "0 2px 12px rgba(99,102,241,0.38)" : "none", transition: "all 0.15s", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap" }}>{r}</button>
           ))}
         </div>
       </div>
 
-      {/* Stat cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
+      {/* Stat cards — 2 cols on mobile, 4 on desktop */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fit,minmax(200px,1fr))", gap: isMobile ? 10 : 14 }}>
         <StatCard title="Total Tasks"      value={statistics.totalTasks}                  icon={<Target size={19}/>}       color="blue"                                      subtitle="Across workspace" />
         <StatCard title="Completion Rate"  value={`${statistics.completionRate}%`}         icon={<CheckCircle2 size={19}/>} color="green"                                     subtitle={`${statistics.tasksByStatus.done} tasks done`} />
         <StatCard title="In Progress"      value={statistics.tasksByStatus.in_progress}    icon={<Clock size={19}/>}        color="orange"                                    subtitle="Active tasks" />
@@ -187,7 +203,7 @@ export default function StatisticsPanel() {
       </div>
 
       {/* Quick Insights */}
-      <div style={{ ...panel, padding: 18 }}>
+      <div style={{ ...panel, padding: isMobile ? 14 : 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -200,27 +216,28 @@ export default function StatisticsPanel() {
           </div>
           <div style={{ padding: "5px 12px", borderRadius: 999, background: "rgba(16,185,129,0.10)", border: "1px solid rgba(16,185,129,0.20)", color: T.green2, fontSize: 11.5, fontWeight: 700 }}>{statistics.completionRate}% complete</div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12 }}>
+        {/* 2 cols on mobile, 4 on desktop */}
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fit,minmax(160px,1fr))", gap: isMobile ? 8 : 12 }}>
           {[
             { label:"Top Contributor", value: topAssignee?topAssignee.name:"None yet",    sub: topAssignee?`${topAssignee.completed} tasks done`:"Assign tasks",  icon:<Star size={13}/>,  bg:"rgba(99,102,241,0.08)",  c:T.indigo2 },
             { label:"Busiest Priority",value: busiestPriority?busiestPriority.name:"None",sub: busiestPriority?`${busiestPriority.count} tasks`:"Add priorities", icon:<Flame size={13}/>, bg:"rgba(245,158,11,0.08)",  c:T.amber   },
             { label:"Pending Tasks",   value: String(pendingCount),                       sub: "todo + in progress",                                             icon:<Clock size={13}/>,  bg:"rgba(239,68,68,0.08)",   c:T.red     },
             { label:"Daily Velocity",  value: velocity===0?"0":`${velocity}/day`,         sub: "avg completions (7d)",                                           icon:<Zap size={13}/>,   bg:"rgba(168,85,247,0.08)",  c:T.purple  },
           ].map((ins,i) => (
-            <div key={i} style={{ padding:"12px 14px", borderRadius:14, background:ins.bg, border:`1px solid ${T.border}` }}>
-              <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:10.5, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", color:T.muted, marginBottom:8 }}>
+            <div key={i} style={{ padding: isMobile ? "10px 11px" : "12px 14px", borderRadius:14, background:ins.bg, border:`1px solid ${T.border}` }}>
+              <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", color:T.muted, marginBottom:8 }}>
                 <span style={{ color:ins.c }}>{ins.icon}</span>{ins.label}
               </div>
-              <div style={{ fontSize:16, fontWeight:800, color:T.text, letterSpacing:"-0.03em", lineHeight:1.2 }}>{ins.value}</div>
+              <div style={{ fontSize: isMobile ? 13 : 16, fontWeight:800, color:T.text, letterSpacing:"-0.03em", lineHeight:1.2 }}>{ins.value}</div>
               <div style={{ fontSize:11, color:T.muted, marginTop:3 }}>{ins.sub}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Completion rate + Status donut */}
-      <div style={{ display:"grid", gridTemplateColumns:"1.1fr 0.9fr", gap:14 }}>
-        <div style={{ ...panel, padding:20 }}>
+      {/* ── Completion rate + Status donut — STACK on mobile ── */}
+      <div style={{ display:"grid", gridTemplateColumns: isSmall ? "1fr" : "1.1fr 0.9fr", gap: isMobile ? 10 : 14 }}>
+        <div style={{ ...panel, padding: isMobile ? 14 : 20 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
             <div>
               <CardTitle>Completion Rate</CardTitle>
@@ -236,13 +253,13 @@ export default function StatisticsPanel() {
           <ProgressRow label="Done"        count={statistics.tasksByStatus.done}        total={statistics.totalTasks} color={T.green}   />
         </div>
 
-        <div style={{ ...panel, padding:20 }}>
+        <div style={{ ...panel, padding: isMobile ? 14 : 20 }}>
           <CardTitle>Status Breakdown</CardTitle>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:16 }}>
-            <div style={{ position:"relative", width:180, height:180 }}>
+            <div style={{ position:"relative", width: isMobile ? 150 : 180, height: isMobile ? 150 : 180 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={statusData} dataKey="value" outerRadius={82} innerRadius={52} paddingAngle={4} strokeWidth={0}>
+                  <Pie data={statusData} dataKey="value" outerRadius={isMobile?68:82} innerRadius={isMobile?42:52} paddingAngle={4} strokeWidth={0}>
                     {statusData.map((e,i) => <Cell key={i} fill={e.color} stroke="transparent" />)}
                   </Pie>
                   <Tooltip content={<ChartTip />} />
@@ -268,26 +285,28 @@ export default function StatisticsPanel() {
       </div>
 
       {/* Weekly Activity */}
-      <div style={{ ...panel, padding:20 }}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+      <div style={{ ...panel, padding: isMobile ? 14 : 20 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:10 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <div style={{ width:34, height:34, borderRadius:10, background:"rgba(99,102,241,0.12)", border:"1px solid rgba(99,102,241,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
               <Activity size={15} color={T.indigo2} />
             </div>
             <div>
               <div style={{ fontSize:13.5, fontWeight:800, color:T.text, letterSpacing:"-0.02em" }}>Weekly Activity</div>
-              <div style={{ fontSize:11.5, color:T.muted }}>Tasks created vs completed — last 7 days</div>
+              <div style={{ fontSize:11.5, color:T.muted }}>Last 7 days</div>
             </div>
           </div>
-          <div style={{ display:"flex", gap:16 }}>
-            {[{label:"Created",color:T.indigo2},{label:"Completed",color:T.green}].map((l,i) => (
-              <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:T.muted }}>
-                <span style={{ width:10, height:10, borderRadius:2, background:l.color, flexShrink:0 }} />{l.label}
-              </div>
-            ))}
-          </div>
+          {!isMobile && (
+            <div style={{ display:"flex", gap:16 }}>
+              {[{label:"Created",color:T.indigo2},{label:"Completed",color:T.green}].map((l,i) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:T.muted }}>
+                  <span style={{ width:10, height:10, borderRadius:2, background:l.color, flexShrink:0 }} />{l.label}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        <ResponsiveContainer width="100%" height={200}>
+        <ResponsiveContainer width="100%" height={isMobile ? 160 : 200}>
           <AreaChart data={weeklyData} margin={{ top:4, right:4, bottom:0, left:-20 }}>
             <defs>
               <linearGradient id="gIndigo" x1="0" y1="0" x2="0" y2="1">
@@ -307,14 +326,14 @@ export default function StatisticsPanel() {
         </ResponsiveContainer>
       </div>
 
-      {/* Distribution charts */}
+      {/* Distribution charts — stack on mobile */}
       {statusData.length > 0 && (
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
-          <div style={{ ...panel, padding:20 }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 10 : 14 }}>
+          <div style={{ ...panel, padding: isMobile ? 14 : 20 }}>
             <CardTitle>Task Distribution</CardTitle>
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
               <PieChart>
-                <Pie data={statusData} dataKey="value" outerRadius={88} paddingAngle={4} strokeWidth={0}>
+                <Pie data={statusData} dataKey="value" outerRadius={isMobile?72:88} paddingAngle={4} strokeWidth={0}>
                   {statusData.map((e,i) => <Cell key={i} fill={e.color} stroke="transparent" />)}
                 </Pie>
                 <Tooltip content={<ChartTip />} />
@@ -329,9 +348,9 @@ export default function StatisticsPanel() {
             </div>
           </div>
           {priorityData.length > 0 && (
-            <div style={{ ...panel, padding:20 }}>
+            <div style={{ ...panel, padding: isMobile ? 14 : 20 }}>
               <CardTitle>Priority Breakdown</CardTitle>
-              <ResponsiveContainer width="100%" height={220}>
+              <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
                 <BarChart data={priorityData} barCategoryGap="28%" margin={{ top:4, right:4, bottom:0, left:-20 }}>
                   <CartesianGrid stroke={T.border} vertical={false} />
                   <XAxis dataKey="name" stroke={T.border} tick={{ fill:T.muted, fontSize:11 }} axisLine={false} tickLine={false} />
@@ -352,9 +371,9 @@ export default function StatisticsPanel() {
         </div>
       )}
 
-      {/* Team Performance + Activity Feed */}
-      <div style={{ display:"grid", gridTemplateColumns:"0.9fr 1.1fr", gap:14, alignItems:"start" }}>
-        <div style={{ ...panel, padding:20 }}>
+      {/* Team Performance + Activity — stack on mobile/tablet */}
+      <div style={{ display:"grid", gridTemplateColumns: isSmall ? "1fr" : "0.9fr 1.1fr", gap: isMobile ? 10 : 14, alignItems:"start" }}>
+        <div style={{ ...panel, padding: isMobile ? 14 : 20 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:18 }}>
             <div style={{ width:34, height:34, borderRadius:10, background:"rgba(168,85,247,0.14)", border:"1px solid rgba(168,85,247,0.22)", display:"flex", alignItems:"center", justifyContent:"center" }}>
               <Users size={15} color={T.purple} />
@@ -392,14 +411,14 @@ export default function StatisticsPanel() {
           )}
         </div>
 
-        <div style={{ ...panel, padding:20 }}>
+        <div style={{ ...panel, padding: isMobile ? 14 : 20 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:18 }}>
             <div style={{ width:34, height:34, borderRadius:10, background:"rgba(99,102,241,0.12)", border:"1px solid rgba(99,102,241,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
               <Calendar size={15} color={T.indigo2} />
             </div>
             <div>
               <div style={{ fontSize:13.5, fontWeight:800, color:T.text, letterSpacing:"-0.02em" }}>Recent Activity</div>
-              <div style={{ fontSize:11.5, color:T.muted }}>Latest updates across the workspace</div>
+              <div style={{ fontSize:11.5, color:T.muted }}>Latest updates</div>
             </div>
           </div>
           <ActivityFeed />
