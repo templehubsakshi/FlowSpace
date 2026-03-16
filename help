@@ -1,0 +1,21 @@
+Frontend -> POST /signup {name, email, password}
+       |
+       V
+Express route -> matches /signup -> calls signup controller
+       |
+       V
+Controller reads req.body -> checks DB -> calls User.create()
+       |
+       V
+User model pre-save hook -> hashes password -> saves in MongoDB
+       |
+       V
+Controller generates JWT -> sends {user, token} back
+       |
+       V
+
+Frontend stores token -> user authenticated
+
+Tool	Kya hai?
+Redux Toolkit (RTK)	Redux logic banane ka tool
+React-Redux	Redux ko React se connect karne ka tool

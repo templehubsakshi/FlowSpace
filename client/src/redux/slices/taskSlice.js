@@ -1,0 +1,735 @@
+// import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+// import api from '../../services/api';
+
+// const initialState = {
+//   tasks: {
+//     todo: [],
+//     in_progress: [],
+//     done: []
+//   },
+//   selectedTask: null,
+//   isLoading: false,
+//   error: null
+// };
+
+// // Fetch tasks for workspace
+// export const fetchTasks = createAsyncThunk(
+//   'tasks/fetchAll',
+//   async (workspaceId, { rejectWithValue }) => {
+//     try {
+//       const response = await api.get(`/tasks/workspace/${workspaceId}`);
+//       return response.data.tasks;
+//     } catch (error) {
+//       return rejectWithValue(error.response?.data?.message);
+//     }
+//   }
+// );
+
+// // Create task
+// export const createTask = createAsyncThunk(
+//   'tasks/create',
+//   async (taskData, { rejectWithValue }) => {
+//     try {
+//       const response = await api.post('/tasks', taskData);
+//       return response.data.task;
+//     } catch (error) {
+//       return rejectWithValue(error.response?.data?.message);
+//     }
+//   }
+// );
+
+// // Update task
+// export const updateTask = createAsyncThunk(
+//   'tasks/update',
+//   async ({ taskId, updates }, { rejectWithValue }) => {
+//     try {
+//       const response = await api.put(`/tasks/${taskId}`, updates);
+//       return response.data.task;
+//     } catch (error) {
+//       return rejectWithValue(error.response?.data?.message);
+//     }
+//   }
+// );
+
+// // Delete task
+// export const deleteTask = createAsyncThunk(
+//   'tasks/delete',
+//   async (taskId, { rejectWithValue }) => {
+//     try {
+//       await api.delete(`/tasks/${taskId}`);
+//       return taskId;
+//     } catch (error) {
+//       return rejectWithValue(error.response?.data?.message);
+//     }
+//   }
+// );
+
+// // Move task (drag-and-drop)
+// export const moveTask = createAsyncThunk(
+//   'tasks/move',
+//   async ({ taskId, newStatus, newOrder }, { rejectWithValue }) => {
+//     try {
+//       const response = await api.patch(`/tasks/${taskId}/move`, {
+//         newStatus,
+//         newOrder
+//       });
+//       return response.data.task;
+//     } catch (error) {
+//       return rejectWithValue(error.response?.data?.message);
+//     }
+//   }
+// );
+
+// // Add comment
+// export const addComment = createAsyncThunk(
+//   'tasks/addComment',
+//   async ({ taskId, text, mentions = [] }, { rejectWithValue }) => {
+//     try {
+//       const response = await api.post(`/tasks/${taskId}/comments`, { text, mentions });
+//       return { taskId, comment: response.data.comment };
+//     } catch (error) {
+//       return rejectWithValue(error.response?.data?.message);
+//     }
+//   }
+// );
+
+// // Delete comment
+// export const deleteComment = createAsyncThunk(
+//   'tasks/deleteComment',
+//   async ({ taskId, commentId }, { rejectWithValue }) => {
+//     try {
+//       await api.delete(`/tasks/${taskId}/comments/${commentId}`);
+//       return { taskId, commentId };
+//     } catch (error) {
+//       return rejectWithValue(error.response?.data?.message);
+//     }
+//   }
+// );
+
+// const taskSlice = createSlice({
+//   name: 'tasks',
+//   initialState,
+//   reducers: {
+//     setSelectedTask: (state, action) => {
+//       state.selectedTask = action.payload;
+//     },
+//     clearError: (state) => {
+//       state.error = null;
+//     },
+    
+//     // ✅ NEW: Add task from socket (no API call)
+//     addTaskFromSocket: (state, action) => {
+//       const task = action.payload;
+//       // Add to correct status column
+//       if (state.tasks[task.status]) {
+//         state.tasks[task.status].unshift(task);
+//       }
+//     },
+    
+//     // ✅ NEW: Update task from socket (no API call)
+//     updateTaskFromSocket: (state, action) => {
+//       const updatedTask = action.payload;
+      
+//       // Find and update task in correct status array
+//       Object.keys(state.tasks).forEach(status => {
+//         const index = state.tasks[status].findIndex(t => t._id === updatedTask._id);
+//         if (index !== -1) {
+//           // If status changed, move to new column
+//           if (state.tasks[status][index].status !== updatedTask.status) {
+//             state.tasks[status].splice(index, 1);
+//             state.tasks[updatedTask.status].unshift(updatedTask);
+//           } else {
+//             state.tasks[status][index] = updatedTask;
+//           }
+//         }
+//       });
+
+//       // Update selected task if it's the one being updated
+//       if (state.selectedTask?._id === updatedTask._id) {
+//         state.selectedTask = updatedTask;
+//       }
+//     },
+    
+//     // ✅ NEW: Delete task from socket (no API call)
+//     deleteTaskFromSocket: (state, action) => {
+//       const taskId = action.payload;
+      
+//       // Remove from all status arrays
+//       Object.keys(state.tasks).forEach(status => {
+//         state.tasks[status] = state.tasks[status].filter(t => t._id !== taskId);
+//       });
+
+//       if (state.selectedTask?._id === taskId) {
+//         state.selectedTask = null;
+//       }
+//     },
+    
+//     // ✅ NEW: Add comment from socket (real-time update)
+//     addCommentFromSocket: (state, action) => {
+//       const { taskId, comment } = action.payload;
+      
+//       // Update selectedTask
+//       if (state.selectedTask?._id === taskId) {
+//         const exists = state.selectedTask.comments?.some(c => c._id === comment._id);
+//         if (!exists) {
+//           if (!state.selectedTask.comments) state.selectedTask.comments = [];
+//           state.selectedTask.comments.push(comment);
+//         }
+//       }
+      
+//       // Update task in arrays
+//       Object.keys(state.tasks).forEach(status => {
+//         const taskIndex = state.tasks[status].findIndex(t => t._id === taskId);
+//         if (taskIndex !== -1) {
+//           const exists = state.tasks[status][taskIndex].comments?.some(c => c._id === comment._id);
+//           if (!exists) {
+//             if (!state.tasks[status][taskIndex].comments) {
+//               state.tasks[status][taskIndex].comments = [];
+//             }
+//             state.tasks[status][taskIndex].comments.push(comment);
+//           }
+//         }
+//       });
+//     },
+    
+//     // Optimistic update for drag-and-drop
+//     optimisticMoveTask: (state, action) => {
+//       const { taskId: _taskId, sourceStatus, destinationStatus, sourceIndex, destinationIndex } = action.payload;
+      
+//       // Find and remove task from source
+//       const taskToMove = state.tasks[sourceStatus][sourceIndex];
+//       if (!taskToMove) return; // Safety check
+
+//       // Remove from source column
+//       state.tasks[sourceStatus].splice(sourceIndex, 1);
+      
+//       // Update task status
+//       taskToMove.status = destinationStatus;
+      
+//       // Add to destination column at specific position
+//       state.tasks[destinationStatus].splice(destinationIndex, 0, taskToMove);
+//     },
+    
+//     // Rollback failed move
+//     rollbackMoveTask: (state, action) => {
+//       const { taskId, sourceStatus, destinationStatus, sourceIndex } = action.payload;
+      
+//       // Find task in destination
+//       const taskIndex = state.tasks[destinationStatus].findIndex(t => t._id === taskId);
+//       if (taskIndex === -1) return;
+      
+//       // Remove from destination
+//       const [task] = state.tasks[destinationStatus].splice(taskIndex, 1);
+      
+//       // Restore original status
+//       task.status = sourceStatus;
+      
+//       // Put back in source at original position
+//       state.tasks[sourceStatus].splice(sourceIndex, 0, task);
+//     }
+//   },
+//   extraReducers: (builder) => {
+//     // Fetch tasks
+//     builder
+//       .addCase(fetchTasks.pending, (state) => {
+//         state.isLoading = true;
+//         state.error = null;
+//       })
+//       .addCase(fetchTasks.fulfilled, (state, action) => {
+//         state.isLoading = false;
+//         state.tasks = action.payload;
+//       })
+//       .addCase(fetchTasks.rejected, (state, action) => {
+//         state.isLoading = false;
+//         state.error = action.payload;
+//       });
+
+//     // Create task
+//     builder
+//       .addCase(createTask.pending, (state) => {
+//         state.isLoading = true;
+//         state.error = null;
+//       })
+//       .addCase(createTask.fulfilled, (state, action) => {
+//         state.isLoading = false;
+//         const task = action.payload;
+//         state.tasks[task.status].unshift(task);
+//       })
+//       .addCase(createTask.rejected, (state, action) => {
+//         state.isLoading = false;
+//         state.error = action.payload;
+//       });
+
+//     // Update task
+//     builder
+//       .addCase(updateTask.fulfilled, (state, action) => {
+//         const updatedTask = action.payload;
+        
+//         // Find and update task in correct status array
+//         Object.keys(state.tasks).forEach(status => {
+//           const index = state.tasks[status].findIndex(t => t._id === updatedTask._id);
+//           if (index !== -1) {
+//             // If status changed, move to new column
+//             if (state.tasks[status][index].status !== updatedTask.status) {
+//               state.tasks[status].splice(index, 1);
+//               state.tasks[updatedTask.status].unshift(updatedTask);
+//             } else {
+//               state.tasks[status][index] = updatedTask;
+//             }
+//           }
+//         });
+
+//         // Update selected task if it's the one being updated
+//         if (state.selectedTask?._id === updatedTask._id) {
+//           state.selectedTask = updatedTask;
+//         }
+//       });
+
+//     // Delete task
+//     builder
+//       .addCase(deleteTask.fulfilled, (state, action) => {
+//         const deletedTaskId = action.payload;
+        
+//         // Remove from all status arrays
+//         Object.keys(state.tasks).forEach(status => {
+//           state.tasks[status] = state.tasks[status].filter(t => t._id !== deletedTaskId);
+//         });
+
+//         if (state.selectedTask?._id === deletedTaskId) {
+//           state.selectedTask = null;
+//         }
+//       });
+
+//     // Move task
+//     builder
+//       .addCase(moveTask.pending, () => {
+//         // Task already moved optimistically
+//       })
+//       .addCase(moveTask.fulfilled, (state, action) => {
+//         const movedTask = action.payload;
+        
+//         // Task already in correct position from optimistic update
+//         // Just update with server data
+//         Object.keys(state.tasks).forEach(status => {
+//           const index = state.tasks[status].findIndex(t => t._id === movedTask._id);
+//           if (index !== -1) {
+//             state.tasks[status][index] = movedTask;
+//           }
+//         });
+//       })
+//       .addCase(moveTask.rejected, (state, action) => {
+//         // Error handled in component with rollback
+//         state.error = action.payload;
+//       });
+    
+//     // ✅ FIXED: Add comment - Update BOTH selectedTask AND tasks array
+//     builder
+//       .addCase(addComment.fulfilled, (state, action) => {
+//         const { taskId, comment } = action.payload;
+        
+//         // ✅ Update selectedTask
+//         if (state.selectedTask?._id === taskId) {
+//           // Check for duplicates
+//           const exists = state.selectedTask.comments?.some(c => c._id === comment._id);
+//           if (!exists) {
+//             if (!state.selectedTask.comments) state.selectedTask.comments = [];
+//             state.selectedTask.comments.push(comment);
+//           }
+//         }
+        
+//         // ✅ ALSO update task in the tasks array (THIS WAS MISSING!)
+//         Object.keys(state.tasks).forEach(status => {
+//           const taskIndex = state.tasks[status].findIndex(t => t._id === taskId);
+//           if (taskIndex !== -1) {
+//             // Check for duplicates
+//             const exists = state.tasks[status][taskIndex].comments?.some(c => c._id === comment._id);
+//             if (!exists) {
+//               if (!state.tasks[status][taskIndex].comments) {
+//                 state.tasks[status][taskIndex].comments = [];
+//               }
+//               state.tasks[status][taskIndex].comments.push(comment);
+//             }
+//           }
+//         });
+//       });
+    
+//     // Delete comment
+//     builder
+//       .addCase(deleteComment.fulfilled, (state, action) => {
+//         const { taskId, commentId } = action.payload;
+        
+//         if (state.selectedTask?._id === taskId) {
+//           state.selectedTask.comments = state.selectedTask.comments.filter(
+//             c => c._id !== commentId
+//           );
+//         }
+//       });
+//   }
+// });
+
+// export const { 
+//   setSelectedTask, 
+//   clearError, 
+//   optimisticMoveTask,
+//   rollbackMoveTask,
+//   addTaskFromSocket,
+//   updateTaskFromSocket,
+//   deleteTaskFromSocket,
+//   addCommentFromSocket  // ✅ NEW: Export for socket events
+// } = taskSlice.actions;
+
+
+// export default taskSlice.reducer;
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import api from '../../services/api';
+
+const initialState = {
+  tasks: {
+    todo: [],
+    in_progress: [],
+    done: []
+  },
+  selectedTask: null,
+  isLoading: false,
+  error: null
+};
+
+// ── Async Thunks ──────────────────────────────────────────────────────────────
+
+export const fetchTasks = createAsyncThunk(
+  'tasks/fetchAll',
+  async (workspaceId, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/tasks/workspace/${workspaceId}`);
+      return response.data.tasks;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message);
+    }
+  }
+);
+
+export const createTask = createAsyncThunk(
+  'tasks/create',
+  async (taskData, { rejectWithValue }) => {
+    try {
+      const response = await api.post('/tasks', taskData);
+      return response.data.task;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message);
+    }
+  }
+);
+
+export const updateTask = createAsyncThunk(
+  'tasks/update',
+  async ({ taskId, updates }, { rejectWithValue }) => {
+    try {
+      const response = await api.put(`/tasks/${taskId}`, updates);
+      return response.data.task;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message);
+    }
+  }
+);
+
+export const deleteTask = createAsyncThunk(
+  'tasks/delete',
+  async (taskId, { rejectWithValue }) => {
+    try {
+      await api.delete(`/tasks/${taskId}`);
+      return taskId;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message);
+    }
+  }
+);
+
+export const moveTask = createAsyncThunk(
+  'tasks/move',
+  async ({ taskId, newStatus, newOrder }, { rejectWithValue }) => {
+    try {
+      const response = await api.patch(`/tasks/${taskId}/move`, { newStatus, newOrder });
+      return response.data.task;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message);
+    }
+  }
+);
+
+export const addComment = createAsyncThunk(
+  'tasks/addComment',
+  async ({ taskId, text, mentions = [] }, { rejectWithValue }) => {
+    try {
+      const response = await api.post(`/tasks/${taskId}/comments`, { text, mentions });
+      return { taskId, comment: response.data.comment };
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message);
+    }
+  }
+);
+
+export const deleteComment = createAsyncThunk(
+  'tasks/deleteComment',
+  async ({ taskId, commentId }, { rejectWithValue }) => {
+    try {
+      await api.delete(`/tasks/${taskId}/comments/${commentId}`);
+      return { taskId, commentId };
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message);
+    }
+  }
+);
+
+// ── Slice ─────────────────────────────────────────────────────────────────────
+
+const taskSlice = createSlice({
+  name: 'tasks',
+  initialState,
+  reducers: {
+    setSelectedTask: (state, action) => {
+      state.selectedTask = action.payload;
+    },
+    clearError: (state) => {
+      state.error = null;
+    },
+
+    // ── Socket: add new task ────────────────────────────────────────────────
+    addTaskFromSocket: (state, action) => {
+      const task = action.payload;
+      if (state.tasks[task.status]) {
+        state.tasks[task.status].unshift(task);
+      }
+    },
+
+    // ── Socket: update or move task ─────────────────────────────────────────
+    // ✅ FIX: _partialMove flag means only patch status — do NOT replace the
+    //         full task object. This prevents task:moved from wiping title,
+    //         assignee, priority, tags etc. from client state.
+    updateTaskFromSocket: (state, action) => {
+      const incoming = action.payload;
+      const isPartialMove = incoming._partialMove === true;
+
+      if (isPartialMove) {
+        // ── Partial move: only update status, keep everything else intact ──
+        const taskId    = incoming._id;
+        const newStatus = incoming.status;
+
+        let foundTask = null;
+        let srcStatus = null;
+
+        Object.keys(state.tasks).forEach(status => {
+          const idx = state.tasks[status].findIndex(t => t._id === taskId);
+          if (idx !== -1) {
+            foundTask = state.tasks[status][idx];
+            srcStatus = status;
+          }
+        });
+
+        if (!foundTask || !srcStatus) return;
+        if (srcStatus === newStatus) return; // already correct column
+
+        // Remove from old column
+        state.tasks[srcStatus] = state.tasks[srcStatus].filter(t => t._id !== taskId);
+
+        // Add to new column with updated status — all other fields preserved
+        state.tasks[newStatus].unshift({ ...foundTask, status: newStatus });
+
+        // Update selectedTask if open
+        if (state.selectedTask?._id === taskId) {
+          state.selectedTask = { ...state.selectedTask, status: newStatus };
+        }
+
+      } else {
+        // ── Full update: replace entire task object (from task:updated) ──
+        const updatedTask = incoming;
+
+        Object.keys(state.tasks).forEach(status => {
+          const index = state.tasks[status].findIndex(t => t._id === updatedTask._id);
+          if (index !== -1) {
+            if (state.tasks[status][index].status !== updatedTask.status) {
+              // Status changed — move to correct column
+              state.tasks[status].splice(index, 1);
+              state.tasks[updatedTask.status].unshift(updatedTask);
+            } else {
+              state.tasks[status][index] = updatedTask;
+            }
+          }
+        });
+
+        if (state.selectedTask?._id === updatedTask._id) {
+          state.selectedTask = updatedTask;
+        }
+      }
+    },
+
+    // ── Socket: delete task ─────────────────────────────────────────────────
+    deleteTaskFromSocket: (state, action) => {
+      const taskId = action.payload;
+      Object.keys(state.tasks).forEach(status => {
+        state.tasks[status] = state.tasks[status].filter(t => t._id !== taskId);
+      });
+      if (state.selectedTask?._id === taskId) {
+        state.selectedTask = null;
+      }
+    },
+
+    // ── Socket: add comment ─────────────────────────────────────────────────
+    addCommentFromSocket: (state, action) => {
+      const { taskId, comment } = action.payload;
+
+      // Update selectedTask
+      if (state.selectedTask?._id === taskId) {
+        const exists = state.selectedTask.comments?.some(c => c._id === comment._id);
+        if (!exists) {
+          if (!state.selectedTask.comments) state.selectedTask.comments = [];
+          state.selectedTask.comments.push(comment);
+        }
+      }
+
+      // Update task in arrays
+      Object.keys(state.tasks).forEach(status => {
+        const idx = state.tasks[status].findIndex(t => t._id === taskId);
+        if (idx !== -1) {
+          const exists = state.tasks[status][idx].comments?.some(c => c._id === comment._id);
+          if (!exists) {
+            if (!state.tasks[status][idx].comments) state.tasks[status][idx].comments = [];
+            state.tasks[status][idx].comments.push(comment);
+          }
+        }
+      });
+    },
+
+    // ── Optimistic drag-and-drop ────────────────────────────────────────────
+    optimisticMoveTask: (state, action) => {
+      const { taskId: _taskId, sourceStatus, destinationStatus, sourceIndex, destinationIndex } = action.payload;
+      const taskToMove = state.tasks[sourceStatus][sourceIndex];
+      if (!taskToMove) return;
+      state.tasks[sourceStatus].splice(sourceIndex, 1);
+      taskToMove.status = destinationStatus;
+      state.tasks[destinationStatus].splice(destinationIndex, 0, taskToMove);
+    },
+
+    // ── Rollback failed move ────────────────────────────────────────────────
+    rollbackMoveTask: (state, action) => {
+      const { taskId, sourceStatus, destinationStatus, sourceIndex } = action.payload;
+      const taskIndex = state.tasks[destinationStatus].findIndex(t => t._id === taskId);
+      if (taskIndex === -1) return;
+      const [task] = state.tasks[destinationStatus].splice(taskIndex, 1);
+      task.status = sourceStatus;
+      state.tasks[sourceStatus].splice(sourceIndex, 0, task);
+    },
+  },
+
+  extraReducers: (builder) => {
+    // fetchTasks
+    builder
+      .addCase(fetchTasks.pending, (state) => { state.isLoading = true; state.error = null; })
+      .addCase(fetchTasks.fulfilled, (state, action) => { state.isLoading = false; state.tasks = action.payload; })
+      .addCase(fetchTasks.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; });
+
+    // createTask
+    builder
+      .addCase(createTask.pending, (state) => { state.isLoading = true; state.error = null; })
+      .addCase(createTask.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const task = action.payload;
+        state.tasks[task.status].unshift(task);
+      })
+      .addCase(createTask.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; });
+
+    // updateTask
+    builder.addCase(updateTask.fulfilled, (state, action) => {
+      const updatedTask = action.payload;
+      Object.keys(state.tasks).forEach(status => {
+        const index = state.tasks[status].findIndex(t => t._id === updatedTask._id);
+        if (index !== -1) {
+          if (state.tasks[status][index].status !== updatedTask.status) {
+            state.tasks[status].splice(index, 1);
+            state.tasks[updatedTask.status].unshift(updatedTask);
+          } else {
+            state.tasks[status][index] = updatedTask;
+          }
+        }
+      });
+      if (state.selectedTask?._id === updatedTask._id) state.selectedTask = updatedTask;
+    });
+
+    // deleteTask
+    builder.addCase(deleteTask.fulfilled, (state, action) => {
+      const deletedTaskId = action.payload;
+      Object.keys(state.tasks).forEach(status => {
+        state.tasks[status] = state.tasks[status].filter(t => t._id !== deletedTaskId);
+      });
+      if (state.selectedTask?._id === deletedTaskId) state.selectedTask = null;
+    });
+
+    // moveTask
+    builder
+      .addCase(moveTask.pending, () => {})
+      .addCase(moveTask.fulfilled, (state, action) => {
+        const movedTask = action.payload;
+        Object.keys(state.tasks).forEach(status => {
+          const index = state.tasks[status].findIndex(t => t._id === movedTask._id);
+          if (index !== -1) state.tasks[status][index] = movedTask;
+        });
+      })
+      .addCase(moveTask.rejected, (state, action) => { state.error = action.payload; });
+
+    // addComment
+    builder.addCase(addComment.fulfilled, (state, action) => {
+      const { taskId, comment } = action.payload;
+      if (state.selectedTask?._id === taskId) {
+        const exists = state.selectedTask.comments?.some(c => c._id === comment._id);
+        if (!exists) {
+          if (!state.selectedTask.comments) state.selectedTask.comments = [];
+          state.selectedTask.comments.push(comment);
+        }
+      }
+      Object.keys(state.tasks).forEach(status => {
+        const idx = state.tasks[status].findIndex(t => t._id === taskId);
+        if (idx !== -1) {
+          const exists = state.tasks[status][idx].comments?.some(c => c._id === comment._id);
+          if (!exists) {
+            if (!state.tasks[status][idx].comments) state.tasks[status][idx].comments = [];
+            state.tasks[status][idx].comments.push(comment);
+          }
+        }
+      });
+    });
+
+    // deleteComment
+    builder.addCase(deleteComment.fulfilled, (state, action) => {
+      const { taskId, commentId } = action.payload;
+
+      // ✅ FIX: was only updating selectedTask — now also updates task arrays
+      // so board comment counts stay accurate without needing a refetch
+      if (state.selectedTask?._id === taskId) {
+        state.selectedTask.comments = state.selectedTask.comments.filter(
+          c => c._id !== commentId
+        );
+      }
+
+      Object.keys(state.tasks).forEach(status => {
+        const idx = state.tasks[status].findIndex(t => t._id === taskId);
+        if (idx !== -1 && state.tasks[status][idx].comments) {
+          state.tasks[status][idx].comments = state.tasks[status][idx].comments.filter(
+            c => c._id !== commentId
+          );
+        }
+      });
+    });
+  },
+});
+
+export const {
+  setSelectedTask,
+  clearError,
+  optimisticMoveTask,
+  rollbackMoveTask,
+  addTaskFromSocket,
+  updateTaskFromSocket,
+  deleteTaskFromSocket,
+  addCommentFromSocket,
+} = taskSlice.actions;
+
+export default taskSlice.reducer;
