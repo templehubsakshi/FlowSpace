@@ -205,7 +205,7 @@ export default function CalendarView() {
               <button onClick={()=>setShowUpcoming(true)} style={{width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:7,background:'var(--surface-sunken)',border:'1px solid var(--border-default)',cursor:'pointer',color:'var(--text-secondary)',position:'relative'}}><Clock style={{width:14,height:14}}/>{stats.overdue>0&&<span style={{position:'absolute',top:5,right:5,width:5,height:5,borderRadius:'50%',background:'#ef4444'}}/>}</button>
               {/* View toggle */}
               <div style={{display:'flex',gap:2,background:'var(--surface-sunken)',border:'1px solid var(--border-default)',borderRadius:8,padding:2}}>
-// eslint-disable-next-line no-unused-vars
+
                 {VIEW_BTNS.map(({k,Comp})=>(
                   <button key={k} onClick={()=>setView(k)} style={{width:30,height:28,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:6,border:'none',cursor:'pointer',background:view===k?'var(--surface-base)':'transparent',color:view===k?'var(--brand-primary)':'var(--text-tertiary)',boxShadow:view===k?'var(--shadow-xs)':'none',transition:'all 0.15s ease'}}>
                     <Comp style={{width:13,height:13}}/>
@@ -223,7 +223,7 @@ export default function CalendarView() {
               </div>
               {/* View toggle */}
               <div style={{display:'flex',gap:2,background:'var(--surface-sunken)',border:'1px solid var(--border-default)',borderRadius:8,padding:2}}>
-// eslint-disable-next-line no-unused-vars
+
                 {VIEW_BTNS.map(({k,Comp})=>(
                   <button key={k} onClick={()=>setView(k)} style={{width:32,height:28,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:6,border:'none',cursor:'pointer',background:view===k?'var(--surface-base)':'transparent',color:view===k?'var(--brand-primary)':'var(--text-tertiary)',boxShadow:view===k?'var(--shadow-xs)':'none',transition:'all 0.15s ease'}}>
                     <Comp style={{width:14,height:14}}/>

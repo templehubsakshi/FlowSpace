@@ -184,9 +184,6 @@ export default function WorkspaceSettingsModal({ onClose }) {
 
               {/* Tabs sidebar */}
               <div style={{ width:150,flexShrink:0,borderRight:`1px solid ${T.border}`,padding:'14px 10px',display:'flex',flexDirection:'column',gap:3 }}>
-// eslint-disable-next-line no-unused-vars
-// eslint-disable-next-line no-unused-vars
-// eslint-disable-next-line no-unused-vars
                 {TABS.map(({ key, label, icon: IconComp }) => (
                   <button key={key} onClick={() => setActiveTab(key)} className={`wsm-tab${key==='danger'?' danger':''}${activeTab===key?' active':''}`}>
                     <IconComp size={13} strokeWidth={2} />{label}

@@ -213,9 +213,6 @@ export default function Dashboard() {
         {/* ── Tab bar ── */}
         {currentWorkspace && (
           <div className="tab-bar" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 22px', display: 'flex', alignItems: 'flex-end', flexShrink: 0, gap: 2 }}>
-// eslint-disable-next-line no-unused-vars
-// eslint-disable-next-line no-unused-vars
-// eslint-disable-next-line no-unused-vars
             {TABS.map(({ key, label, Icon: TabIcon }) => {
               const active = activeTab === key;
               return (
