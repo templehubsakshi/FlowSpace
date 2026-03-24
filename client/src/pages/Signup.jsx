@@ -112,19 +112,14 @@ export default function Signup() {
   const navigate = useNavigate();
   const { isLoading, error, isAuthenticated } = useSelector(state => state.auth);
 
-  // ✅ Clear old session so fresh workspace is created
-  useEffect(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('currentWorkspaceId');
-  }, []);
-
   useEffect(() => {
     if (error) { toast.error(error); dispatch(clearError()); }
   }, [error, dispatch]);
 
+  // ✅ Redirect when Redux isAuthenticated becomes true (set by signup.fulfilled)
+  // No localStorage check — cookie + Redux state is the source of truth
   useEffect(() => {
-    if (isAuthenticated && localStorage.getItem('token')) navigate('/dashboard', { replace: true });
+    if (isAuthenticated) navigate('/dashboard', { replace: true });
   }, [isAuthenticated, navigate]);
 
   const handleMouseMove = e => {
@@ -218,7 +213,6 @@ export default function Signup() {
           justifyContent: 'center', padding: '64px 80px',
           position: 'relative', zIndex: 1,
         }}>
-          {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 56 }}>
             <div style={{
               width: 46, height: 46, borderRadius: 14, flexShrink: 0,
@@ -258,7 +252,6 @@ export default function Signup() {
             Join 50,000+ teams already shipping faster with real-time boards, live collaboration, and powerful analytics.
           </p>
 
-          {/* Feature Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 44, maxWidth: 440 }}>
             {[
               { emoji: '🚀', title: 'Ship faster',         desc: 'Built for modern teams',     color: '#818cf8', cl: 'b0 float0' },
@@ -290,7 +283,6 @@ export default function Signup() {
             ))}
           </div>
 
-          {/* Stats */}
           <div style={{ display: 'flex', gap: 32, paddingTop: 24, borderTop: '1px solid rgba(255,255,255,.07)' }}>
             {STATS.map(({ value, label }, i) => (
               <div key={label} className={`stat-${i}`} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -330,7 +322,6 @@ export default function Signup() {
             background: 'radial-gradient(circle,rgba(99,102,241,.09) 0%,transparent 65%)',
           }}/>
 
-          {/* 3D Card */}
           <div className="card-in" ref={cardRef} style={{
             width: '100%', maxWidth: 390,
             transform: `perspective(900px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`,
@@ -362,7 +353,6 @@ export default function Signup() {
               <div style={{ position: 'absolute', top: -60, right: -60, width: 160, height: 160, borderRadius: '50%', pointerEvents: 'none', background: 'radial-gradient(circle,rgba(99,102,241,.28) 0%,transparent 68%)' }}/>
 
               <div style={{ padding: '36px 34px 32px', position: 'relative' }}>
-
                 <div style={{ marginBottom: 24 }}>
                   <h1 style={{
                     fontSize: 26, fontWeight: 800, letterSpacing: '-.04em',
@@ -377,8 +367,6 @@ export default function Signup() {
                 </div>
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-
-                  {/* Name */}
                   <div className="field-in" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <label style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.09em', textTransform: 'uppercase', color: 'rgba(255,255,255,.22)' }}>Full Name</label>
                     <div style={{ position: 'relative' }}>
@@ -393,7 +381,6 @@ export default function Signup() {
                     </div>
                   </div>
 
-                  {/* Email */}
                   <div className="field-in" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <label style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.09em', textTransform: 'uppercase', color: 'rgba(255,255,255,.22)' }}>Email Address</label>
                     <div style={{ position: 'relative' }}>
@@ -408,7 +395,6 @@ export default function Signup() {
                     </div>
                   </div>
 
-                  {/* Password */}
                   <div className="field-in" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <label style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.09em', textTransform: 'uppercase', color: 'rgba(255,255,255,.22)' }}>Password</label>
                     <div style={{ position: 'relative' }}>
@@ -431,7 +417,6 @@ export default function Signup() {
                     </div>
                   </div>
 
-                  {/* Confirm Password */}
                   <div className="field-in" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <label style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.09em', textTransform: 'uppercase', color: 'rgba(255,255,255,.22)' }}>Confirm Password</label>
                     <div style={{ position: 'relative' }}>
@@ -446,7 +431,6 @@ export default function Signup() {
                     </div>
                   </div>
 
-                  {/* Submit */}
                   <button type="submit" disabled={isLoading} className="cta-btn" style={{
                     marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
                     padding: '13px 20px', borderRadius: 12, width: '100%',
@@ -463,14 +447,12 @@ export default function Signup() {
                   </button>
                 </form>
 
-                {/* Divider */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '20px 0 16px' }}>
                   <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.07)' }}/>
                   <span style={{ fontSize: 11, color: 'rgba(255,255,255,.2)', fontWeight: 500 }}>Already have an account?</span>
                   <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.07)' }}/>
                 </div>
 
-                {/* Login link */}
                 <Link to="/login" style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                   padding: '11px 20px', borderRadius: 12, width: '100%',
@@ -502,7 +484,6 @@ export default function Signup() {
             </div>
           </div>
         </div>
-
       </div>
     </>
   );

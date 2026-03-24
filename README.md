@@ -344,7 +344,7 @@ MONGO_URI=mongodb://localhost:27017/flowspace
 PORT=5000
 NODE_ENV=development
 
-# Authentication
+#look i wnat myAuthentication
 JWT_SECRET=your_super_secret_jwt_key_minimum_32_characters
 
 # CORS

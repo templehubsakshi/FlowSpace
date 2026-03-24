@@ -6,16 +6,14 @@ const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
 };
 
-// ✅ UPDATED: Cookie options for cross-domain
-const getCookieOptions = () => {
-  return {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // Must be true for sameSite: 'none'
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // ✅ CRITICAL FIX
-    maxAge: 7 * 24 * 60 * 60 * 1000,  // 7 days
-    path: '/'
-  };
-};
+// Cookie options
+const getCookieOptions = () => ({
+  httpOnly: true,                                                          // ✅ JS cannot read this
+  secure: process.env.NODE_ENV === 'production',                          // ✅ HTTPS only in prod
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',      // ✅ Cross-domain in prod
+  maxAge: 7 * 24 * 60 * 60 * 1000,                                       // 7 days
+  path: '/'
+});
 
 // Signup
 exports.signup = async (req, res) => {
@@ -34,7 +32,7 @@ exports.signup = async (req, res) => {
     const user = await User.create({ name, email, password });
     const token = generateToken(user._id);
 
-    // Set httpOnly cookie
+    // ✅ Token goes ONLY in httpOnly cookie — never in response body
     res.cookie('token', token, getCookieOptions());
 
     res.status(201).json({
@@ -45,8 +43,8 @@ exports.signup = async (req, res) => {
         name: user.name,
         email: user.email,
         createdAt: user.createdAt
-      },
-      token: token
+      }
+      // ✅ No token field in body
     });
   } catch (error) {
     console.error('Signup error:', error);
@@ -75,7 +73,7 @@ exports.login = async (req, res) => {
 
     const token = generateToken(user._id);
 
-    // Set httpOnly cookie
+    // ✅ Token goes ONLY in httpOnly cookie — never in response body
     res.cookie('token', token, getCookieOptions());
 
     res.json({
@@ -85,8 +83,8 @@ exports.login = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email
-      },
-      token: token
+      }
+      // ✅ No token field in body
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -97,6 +95,7 @@ exports.login = async (req, res) => {
 // Logout
 exports.logout = (req, res) => {
   try {
+    // ✅ Clear the cookie by expiring it immediately
     res.cookie('token', '', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -105,10 +104,7 @@ exports.logout = (req, res) => {
       path: '/'
     });
 
-    res.json({
-      success: true,
-      message: 'Logged out successfully'
-    });
+    res.json({ success: true, message: 'Logged out successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -118,7 +114,7 @@ exports.logout = (req, res) => {
 exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.userId);
-    
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }

@@ -5,33 +5,23 @@ let io;
 const initializeSocket = (server) => {
   const allowedOrigins = [
     'http://localhost:5173',
+    'http://localhost:5174',  // ✅ Added
     'http://localhost:3000',
     'https://flow-space-black.vercel.app'
   ];
 
   io = socketIO(server, {
     cors: {
-      origin: function(origin, callback) {
-        // Allow requests with no origin
+      origin: function (origin, callback) {
         if (!origin) return callback(null, true);
-        
-        // Check if origin is in allowed list
-        if (allowedOrigins.includes(origin)) {
-          return callback(null, true);
-        }
-        
-        // ✅ NEW: Allow ALL Vercel preview deployments
-        if (origin && origin.endsWith('.vercel.app')) {
-          console.log(`✅ Socket allowing Vercel origin: ${origin}`);
-          return callback(null, true);
-        }
-        
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        if (origin.endsWith('.vercel.app')) return callback(null, true);
         console.warn(`❌ Socket blocked origin: ${origin}`);
         callback(new Error('Not allowed by CORS'));
       },
       methods: ['GET', 'POST'],
       credentials: true,
-      allowedHeaders: ['authorization', 'content-type']
+      allowedHeaders: ['content-type', 'cookie'],
     },
     pingTimeout: 60000,
     pingInterval: 25000,
@@ -42,7 +32,6 @@ const initializeSocket = (server) => {
   });
 
   console.log('✅ Socket.IO initialized');
-  console.log(`🔗 Socket allowed: ${allowedOrigins.join(', ')} + all *.vercel.app`);
 
   io.engine.on('connection_error', (err) => {
     console.error('❌ Socket connection error:', err.message);
@@ -52,9 +41,7 @@ const initializeSocket = (server) => {
 };
 
 const getIO = () => {
-  if (!io) {
-    throw new Error('Socket.IO not initialized!');
-  }
+  if (!io) throw new Error('Socket.IO not initialized!');
   return io;
 };
 

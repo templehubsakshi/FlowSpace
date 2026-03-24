@@ -114,8 +114,10 @@ export default function Login() {
     if (error) { toast.error(error); dispatch(clearError()); }
   }, [error, dispatch]);
 
+  // ✅ Redirect when Redux isAuthenticated becomes true (set by login.fulfilled)
+  // No localStorage check — cookie + Redux state is the source of truth
   useEffect(() => {
-    if (isAuthenticated && localStorage.getItem('token')) navigate('/dashboard', { replace: true });
+    if (isAuthenticated) navigate('/dashboard', { replace: true });
   }, [isAuthenticated, navigate]);
 
   const handleMouseMove = e => {
@@ -205,7 +207,6 @@ export default function Login() {
           justifyContent: 'center', padding: '64px 80px',
           position: 'relative', zIndex: 1,
         }}>
-          {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 56 }}>
             <div style={{
               width: 46, height: 46, borderRadius: 14, flexShrink: 0,
@@ -245,7 +246,6 @@ export default function Login() {
             Real-time kanban boards, live collaboration, and powerful analytics — all in one beautiful workspace.
           </p>
 
-          {/* Feature Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 44, maxWidth: 440 }}>
             {[
               { emoji: '⚡', title: 'Real-time sync',      desc: 'Changes appear instantly',    color: '#818cf8', cl: 'b0 float0' },
@@ -277,7 +277,6 @@ export default function Login() {
             ))}
           </div>
 
-          {/* Stats */}
           <div style={{ display: 'flex', gap: 32, paddingTop: 24, borderTop: '1px solid rgba(255,255,255,.07)' }}>
             {STATS.map(({ value, label }, i) => (
               <div key={label} className={`stat-${i}`} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -317,7 +316,6 @@ export default function Login() {
             background: 'radial-gradient(circle,rgba(99,102,241,.09) 0%,transparent 65%)',
           }}/>
 
-          {/* 3D Card */}
           <div className="card-in" ref={cardRef} style={{
             width: '100%', maxWidth: 390,
             transform: `perspective(900px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`,
@@ -349,7 +347,6 @@ export default function Login() {
               <div style={{ position: 'absolute', top: -60, right: -60, width: 160, height: 160, borderRadius: '50%', pointerEvents: 'none', background: 'radial-gradient(circle,rgba(168,85,247,.28) 0%,transparent 68%)' }}/>
 
               <div style={{ padding: '36px 34px 32px', position: 'relative' }}>
-
                 <div style={{ marginBottom: 24 }}>
                   <h1 style={{
                     fontSize: 26, fontWeight: 800, letterSpacing: '-.04em',
@@ -364,7 +361,6 @@ export default function Login() {
                 </div>
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-
                   <div className="field-in" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <label style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.09em', textTransform: 'uppercase', color: 'rgba(255,255,255,.22)' }}>Email Address</label>
                     <div style={{ position: 'relative' }}>
@@ -417,14 +413,12 @@ export default function Login() {
                   </button>
                 </form>
 
-                {/* Divider */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '20px 0 16px' }}>
                   <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.07)' }}/>
                   <span style={{ fontSize: 11, color: 'rgba(255,255,255,.2)', fontWeight: 500 }}>Don't have an account?</span>
                   <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.07)' }}/>
                 </div>
 
-                {/* Signup link */}
                 <Link to="/signup" style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                   padding: '11px 20px', borderRadius: 12, width: '100%',
@@ -456,7 +450,6 @@ export default function Login() {
             </div>
           </div>
         </div>
-
       </div>
     </>
   );

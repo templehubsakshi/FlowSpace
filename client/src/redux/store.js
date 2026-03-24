@@ -1,25 +1,40 @@
-import {configureStore} from '@reduxjs/toolkit';//configurestore ek readymade box hain ...ek store bana do easy tareeke se 
-
-import authReducer from './slices/authSlice'//auth ka data alag alag file mein ho toh iss file mein laao
-import workspaceReducer from './slices/workspaceSlice';//workspace ka data alag alag file mein ho toh iss file mein laao
-import taskReducer from './slices/taskSlice'; // ADD
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import authReducer from './slices/authSlice';
+import workspaceReducer from './slices/workspaceSlice';
+import taskReducer from './slices/taskSlice';
 import statisticsReducer from './slices/statisticsSlice';
 import notificationsReducer from './slices/notificationSlice';
-const store =configureStore({//ab ek big register we make it 
-reducer:{
-    auth:authReducer,//auth ke sare data ko authReducer se leke store mein daal do “Is register ke andar ek section hoga jiska naam hoga 👉 auth”
-    workspace:workspaceReducer,//workspace ke sare data ko workspaceReducer se leke store mein daal do “Is register ke andar ek section hoga jiska naam hoga 👉 workspace”
-    tasks: taskReducer, // ADD
-     statistics: statisticsReducer,
-     notifications: notificationsReducer,
-},
-middleware:(getDefaultMiddleware)=>
-    getDefaultMiddleware({
-        serializableCheck:false,//Redux ko bolo ki wo zyada strict na bane, complex data ko bhi accept kar le
-})
-})
-export default store;
 
-// Redux, tu zyada strict mat ban
-// Login ke time thode complex data aayenge
-// unko accept kar lena”
+const appReducer = combineReducers({
+  auth: authReducer,
+  workspace: workspaceReducer,
+  tasks: taskReducer,
+  statistics: statisticsReducer,
+  notifications: notificationsReducer,
+});
+
+// FIX: Reset ALL slices to initialState on logout.
+// Previously store.js used configureStore({ reducer: {} }) directly,
+// so only authSlice reset on logout — workspace/tasks/notifications
+// stayed in memory. User B would see User A's data, AND the invite
+// modal would send User A's stale workspaceId causing 403 errors.
+const rootReducer = (state, action) => {
+  if (
+    action.type === 'auth/logout/fulfilled' ||
+    action.type === 'auth/logout/rejected' || // clear even if API fails
+    action.type === 'auth/forceLogout'
+  ) {
+    state = undefined; // every slice resets to its own initialState
+  }
+  return appReducer(state, action);
+};
+
+const store = configureStore({
+  reducer: rootReducer,
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: false,
+    }),
+});
+
+export default store;

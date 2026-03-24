@@ -37,35 +37,31 @@ export default function InviteMemberModal({ onClose }) {
   const [email, setEmail]           = useState('');
   const [role, setRole]             = useState('member');
   const [isLoading, setIsLoading]   = useState(false);
-  const [succeeded, setSucceeded]   = useState(false); // FIX: in-modal success state
-  const [emailError, setEmailError] = useState('');    // FIX: inline validation
+  const [succeeded, setSucceeded]   = useState(false);
+  const [emailError, setEmailError] = useState('');
   const [visible, setVisible]       = useState(false);
 
   const inputRef = useRef(null);
   const modalRef = useRef(null);
   const titleId  = 'fsm-title';
 
-  /* mount → animate in + auto-focus */
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true));
     setTimeout(() => inputRef.current?.focus(), 250);
   }, []);
 
-  /* FIX: proper exit animation before unmount */
   const handleClose = useCallback(() => {
     if (isLoading) return;
     setVisible(false);
     setTimeout(onClose, 220);
   }, [isLoading, onClose]);
 
-  /* FIX: ESC key closes modal */
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape' && !isLoading) handleClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isLoading, handleClose]);
 
-  /* FIX: focus trap — Tab stays inside modal */
   useEffect(() => {
     const trap = (e) => {
       if (e.key !== 'Tab' || !modalRef.current) return;
@@ -83,7 +79,6 @@ export default function InviteMemberModal({ onClose }) {
     return () => window.removeEventListener('keydown', trap);
   }, []);
 
-  /* FIX: real-time email validation on blur */
   const handleEmailBlur = () => {
     if (email && !isValidEmail(email)) setEmailError('Please enter a valid email address.');
     else setEmailError('');
@@ -91,13 +86,21 @@ export default function InviteMemberModal({ onClose }) {
 
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
-    if (emailError) setEmailError(''); // clear error while typing
+    if (emailError) setEmailError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email.trim())       { setEmailError('Email is required.'); return; }
-    if (!isValidEmail(email)){ setEmailError('Please enter a valid email address.'); return; }
+    if (!email.trim())        { setEmailError('Email is required.'); return; }
+    if (!isValidEmail(email)) { setEmailError('Please enter a valid email address.'); return; }
+
+    // FIX: null guard — currentWorkspace can be null if store was just reset
+    // or if there's a race condition on first load. Without this guard,
+    // accessing currentWorkspace._id throws and the modal crashes silently.
+    if (!currentWorkspace?._id) {
+      toast.error('No workspace selected. Please refresh the page.');
+      return;
+    }
 
     setIsLoading(true);
     const result = await dispatch(inviteMember({
@@ -106,19 +109,26 @@ export default function InviteMemberModal({ onClose }) {
     setIsLoading(false);
 
     if (result.type === 'workspace/inviteMember/fulfilled') {
-      setSucceeded(true); // FIX: show success state, then close
+      setSucceeded(true);
       toast.success('Member invited successfully!');
       setTimeout(handleClose, 1600);
     } else {
-      toast.error(result.payload || 'Failed to invite member');
+      // FIX: rejectWithValue can return a string, an object with .message,
+      // or undefined depending on the error shape. Extract properly so the
+      // real server message (e.g. "User not found with this email") is shown
+      // instead of always falling back to the generic string.
+      const errMsg =
+        typeof result.payload === 'string'
+          ? result.payload
+          : result.payload?.message || 'Failed to invite member';
+      toast.error(errMsg);
     }
   };
 
-  /* derived */
   const showAvatar   = email.length > 3 && email.includes('@');
   const avatarColors = showAvatar ? getAvatarColor(email) : null;
   const initials     = getInitials(email);
-  const canSubmit    = isValidEmail(email) && !isLoading && !succeeded; // FIX: button disabled until valid
+  const canSubmit    = isValidEmail(email) && !isLoading && !succeeded;
 
   return (
     <>
@@ -128,7 +138,6 @@ export default function InviteMemberModal({ onClose }) {
           transition: opacity 0.22s cubic-bezier(.22,1,.36,1),
                       transform 0.22s cubic-bezier(.22,1,.36,1);
         }
-        /* FIX: separate in/out classes for proper enter AND exit animation */
         .fsm-card.in  { opacity:1!important; transform:scale(1) translateY(0)!important; }
         .fsm-card.out { opacity:0!important; transform:scale(0.96) translateY(10px)!important; }
         .fsm-glow {
@@ -149,7 +158,6 @@ export default function InviteMemberModal({ onClose }) {
           border-color:rgba(99,102,241,.6);
           box-shadow:0 0 0 3px rgba(99,102,241,.18),0 0 18px rgba(99,102,241,.1);
         }
-        /* FIX: red error state on input */
         .fsm-input.error {
           border-color:rgba(239,68,68,.6)!important;
           box-shadow:0 0 0 3px rgba(239,68,68,.15)!important;
@@ -199,7 +207,6 @@ export default function InviteMemberModal({ onClose }) {
           border:2px solid rgba(255,255,255,.25); border-top-color:#fff;
           animation:spin .65s linear infinite; display:inline-block;
         }
-        /* FIX: success animation */
         @keyframes successPop {
           0%  { transform:scale(.5); opacity:0; }
           65% { transform:scale(1.15); }
@@ -213,7 +220,6 @@ export default function InviteMemberModal({ onClose }) {
         .fsm-success-text { animation:fadeSlideIn .3s .25s ease both; }
       `}</style>
 
-      {/* Overlay */}
       <div
         className="fsm-overlay fixed inset-0 z-50 flex items-center justify-center px-4"
         style={{
@@ -223,12 +229,10 @@ export default function InviteMemberModal({ onClose }) {
         }}
         onClick={(e) => e.target === e.currentTarget && handleClose()}
       >
-        {/* Gradient border wrapper */}
         <div style={{
           position:'relative', borderRadius:22, padding:1, width:'100%', maxWidth:460,
           background:'linear-gradient(145deg,rgba(139,92,246,.5),rgba(99,102,241,.25) 50%,rgba(255,255,255,.06))',
         }}>
-          {/* FIX: .in / .out swap properly on enter and exit */}
           <div
             ref={modalRef}
             role="dialog"
@@ -280,7 +284,7 @@ export default function InviteMemberModal({ onClose }) {
               </button>
             </div>
 
-            {/* ── FIX: Success State ── */}
+            {/* ── Success State ── */}
             {succeeded ? (
               <div style={{
                 padding:'44px 26px 48px',
@@ -344,7 +348,6 @@ export default function InviteMemberModal({ onClose }) {
                         borderRadius:11, fontSize:14,
                       }}
                     />
-                    {/* Avatar preview */}
                     <div
                       className={`fsm-avatar ${showAvatar ? 'show' : 'hide'}`}
                       aria-hidden="true"
@@ -361,7 +364,6 @@ export default function InviteMemberModal({ onClose }) {
                       {initials}
                     </div>
                   </div>
-                  {/* FIX: inline error message */}
                   {emailError && (
                     <p id="fsm-email-error" role="alert" style={{
                       fontSize:12, color:'#f87171', margin:'7px 0 0 2px',
@@ -382,8 +384,8 @@ export default function InviteMemberModal({ onClose }) {
                   </label>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                     {[
-                      { key:'member', icon:<Eye style={{width:14,height:14}}/>,    label:'Member', desc:'Can view and edit tasks',           accent:'#818cf8' },
-                      { key:'admin',  icon:<Shield style={{width:14,height:14}}/>, label:'Admin',  desc:'Can manage members & settings',    accent:'#a78bfa' },
+                      { key:'member', icon:<Eye style={{width:14,height:14}}/>,    label:'Member', desc:'Can view and edit tasks',        accent:'#818cf8' },
+                      { key:'admin',  icon:<Shield style={{width:14,height:14}}/>, label:'Admin',  desc:'Can manage members & settings', accent:'#a78bfa' },
                     ].map(({ key, icon, label, desc, accent }) => (
                       <button
                         key={key}
@@ -398,7 +400,6 @@ export default function InviteMemberModal({ onClose }) {
                           {icon}
                           <span style={{fontSize:13.5,fontWeight:600,color:role===key ? '#c7d2fe' : '#64748b'}}>{label}</span>
                         </div>
-                        {/* FIX: was #334155 (invisible on dark bg), now #4f6072 */}
                         <p style={{fontSize:11.5,color:'#4f6072',margin:0,lineHeight:1.4}}>{desc}</p>
                       </button>
                     ))}
@@ -429,7 +430,6 @@ export default function InviteMemberModal({ onClose }) {
                   >
                     Cancel
                   </button>
-                  {/* FIX: disabled until email is valid */}
                   <button
                     type="submit"
                     disabled={!canSubmit}
