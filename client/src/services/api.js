@@ -3,36 +3,28 @@ import toast from 'react-hot-toast';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
-  withCredentials: true, // sends httpOnly cookie automatically on every request
+  withCredentials: true,
   timeout: 10000
 });
 
-// Request interceptor — cookie is sent automatically, nothing to inject
 api.interceptors.request.use(
   (config) => config,
   (error) => Promise.reject(error)
 );
 
-// FIX: Previously there were TWO response interceptors. Axios chains them, so
-// every error passed through both. A 401 would show the toast in the first
-// interceptor, then the second (retry) interceptor would catch the same
-// rejection and evaluate it again. A 500 could show two toasts if retried.
-// Merged into one interceptor that handles both toasts and retry logic.
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const config = error.config;
 
-    // ── Network error (no response at all) ───────────────────────────────────
+    // ── Network error ────────────────────────────────────────────────────────
     if (!error.response) {
-      // Retry up to 2 times with exponential backoff for network errors only
       if (config && (config.__retryCount || 0) < 2) {
         config.__retryCount = (config.__retryCount || 0) + 1;
         const delay = Math.pow(2, config.__retryCount) * 1000;
         await new Promise(resolve => setTimeout(resolve, delay));
         return api(config);
       }
-
       toast.error('Network error. Please check your connection.', {
         id: 'network-error',
         duration: 5000
@@ -40,9 +32,15 @@ api.interceptors.response.use(
       return Promise.reject(new Error('Network error'));
     }
 
-    // ── HTTP error responses ─────────────────────────────────────────────────
     const status  = error.response.status;
     const message = error.response.data?.message;
+
+    // FIX: The /auth/me (checkAuth) call on app load returns 401 when the user
+    // is simply not logged in yet — this is expected, not an error worth toasting.
+    // Without this check, every page load for a logged-out user showed
+    // "Session expired. Please login again." even on first visit.
+    // We suppress the toast and force-logout logic for the checkAuth route only.
+    const isCheckAuthCall = config?.url?.includes('/auth/me');
 
     switch (status) {
       case 400:
@@ -50,16 +48,20 @@ api.interceptors.response.use(
         break;
 
       case 401:
-        toast.error('Session expired. Please login again.', { id: 'error-401' });
-        // Fire forceLogout via custom event — App.jsx listener dispatches to Redux
-        window.dispatchEvent(new Event('force-logout'));
-        if (!window.__isRedirecting) {
-          window.__isRedirecting = true;
-          setTimeout(() => {
-            window.__isRedirecting = false;
-            window.location.href = '/login';
-          }, 500);
+        if (!isCheckAuthCall) {
+          // Real 401 — user was logged in but session expired mid-session
+          toast.error('Session expired. Please login again.', { id: 'error-401' });
+          window.dispatchEvent(new Event('force-logout'));
+          if (!window.__isRedirecting) {
+            window.__isRedirecting = true;
+            setTimeout(() => {
+              window.__isRedirecting = false;
+              window.location.href = '/login';
+            }, 500);
+          }
         }
+        // If it IS checkAuth, stay silent — App.jsx spinner → authSlice.rejected
+        // → isLoading = false → isAuthenticated = false → routes render → /login
         break;
 
       case 403:

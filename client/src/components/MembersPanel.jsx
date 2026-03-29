@@ -1,10 +1,10 @@
 import { useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { removeMember } from "../redux/slices/workspaceSlice";
+import { removeMember, updateMemberRole } from "../redux/slices/workspaceSlice";
 import toast from "react-hot-toast";
 import {
   Crown, Shield, User, Trash2, UserPlus,
-  Users, Mail, Search, CheckCircle2, Briefcase, Calendar,
+  Users, Mail, Search, CheckCircle2, Briefcase, Calendar, ChevronDown,
 } from "lucide-react";
 import InviteMemberModal from "./InviteMemberModal";
 import { useThemeColors } from "../hooks/useTheme";
@@ -73,9 +73,10 @@ export default function MembersPanel() {
   const { tasks }            = useSelector(s => s.tasks);
 
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [removingId, setRemovingId]           = useState(null);
-  const [search, setSearch]                   = useState("");
-  const [hoveredId, setHoveredId]             = useState(null);
+  const [removingId,      setRemovingId]      = useState(null);
+  const [updatingRoleId,  setUpdatingRoleId]  = useState(null);
+  const [search,          setSearch]          = useState("");
+  const [hoveredId,       setHoveredId]       = useState(null);
 
   const taskCountByUser = useMemo(() => {
     const map = {};
@@ -99,6 +100,7 @@ export default function MembersPanel() {
   const myId    = user?.id || user?._id;
   const currentMember  = members.find(m => m.user._id === myId);
   const isAdminOrOwner = currentMember?.role === "admin" || currentMember?.role === "owner";
+  const isOwner        = currentMember?.role === "owner";
 
   const roleOrder = { owner: 0, admin: 1, member: 2 };
   const filtered  = members
@@ -121,8 +123,49 @@ export default function MembersPanel() {
     else toast.error(res.payload || "Failed to remove member");
   };
 
+  // Owner kisi member ka role change kare — member↔admin toggle
+  const handleRoleChange = async (memberId, newRole) => {
+    setUpdatingRoleId(memberId);
+    const res = await dispatch(updateMemberRole({
+      workspaceId: currentWorkspace._id,
+      memberId,
+      role: newRole,
+    }));
+    setUpdatingRoleId(null);
+    if (res.type === "workspace/updateMemberRole/fulfilled") {
+      toast.success(`Role updated to ${newRole}`);
+    } else {
+      toast.error(res.payload || "Failed to update role");
+    }
+  };
+
   return (
     <>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .role-select {
+          appearance: none; -webkit-appearance: none;
+          background-color: var(--surface2, #1e2130);
+          border: 1px solid rgba(99,102,241,0.30);
+          border-radius: 8px;
+          padding: 4px 26px 4px 10px;
+          font-size: 12px; font-weight: 600;
+          cursor: pointer;
+          color: #818cf8;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23818cf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 8px center;
+          transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .role-select option {
+          background-color: var(--surface2, #1e2130);
+          color: #c7d2fe;
+        }
+        .role-select:hover { border-color: rgba(99,102,241,0.55); }
+        .role-select:focus { outline: none; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+        .role-select:disabled { opacity: 0.5; cursor: not-allowed; }
+      `}</style>
+
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
 
         {/* ── Header ── */}
@@ -213,9 +256,11 @@ export default function MembersPanel() {
               const av         = avatarColor(member.user.name, member.user._id);
               const isMe       = member.user._id === myId;
               const isRemoving = removingId === member.user._id;
+              const isUpdating = updatingRoleId === member.user._id;
               const isHov      = hoveredId === member.user._id;
               const taskCount  = taskCountByUser[member.user._id] || 0;
               const joined     = joinedText(member.joinedAt || member.createdAt || currentWorkspace.createdAt);
+              const isThisOwner = member.role === "owner";
 
               return (
                 <div key={member.user._id}
@@ -281,27 +326,50 @@ export default function MembersPanel() {
                     </div>
                   </div>
 
-                  {/* Remove */}
-                  {isAdminOrOwner && member.role !== "owner" && !isMe && (
-                    <button
-                      onClick={() => handleRemove(member.user._id)}
-                      disabled={isRemoving}
-                      style={{
-                        width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                        border: `1px solid ${T.border}`, background: "transparent",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        cursor: isRemoving ? "not-allowed" : "pointer",
-                        opacity: isRemoving ? 0.5 : 1, transition: "all 0.15s",
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(220,38,38,0.10)"; e.currentTarget.style.borderColor = "rgba(220,38,38,0.35)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = T.border; }}
-                    >
-                      {isRemoving
-                        ? <div style={{ width: 12, height: 12, borderRadius: "50%", border: "2px solid #ef4444", borderTopColor: "transparent", animation: "spin 0.7s linear infinite" }} />
-                        : <Trash2 size={13} color={T.red} />
-                      }
-                    </button>
-                  )}
+                  {/* Actions — role change + remove */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+
+                    {/* Role change dropdown — sirf owner dekh sakta hai,
+                        aur sirf non-owner members pe dikhega */}
+                    {isOwner && !isThisOwner && !isMe && (
+                      isUpdating ? (
+                        <div style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid #818cf8", borderTopColor: "transparent", animation: "spin 0.7s linear infinite" }} />
+                      ) : (
+                        <select
+                          className="role-select"
+                          value={member.role}
+                          onChange={e => handleRoleChange(member.user._id, e.target.value)}
+                          disabled={isUpdating}
+                          title="Change role"
+                        >
+                          <option value="member">Member</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      )
+                    )}
+
+                    {/* Remove button — admin/owner dekh sakta hai, owner ko nahi hata sakta */}
+                    {isAdminOrOwner && !isThisOwner && !isMe && (
+                      <button
+                        onClick={() => handleRemove(member.user._id)}
+                        disabled={isRemoving}
+                        style={{
+                          width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                          border: `1px solid ${T.border}`, background: "transparent",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          cursor: isRemoving ? "not-allowed" : "pointer",
+                          opacity: isRemoving ? 0.5 : 1, transition: "all 0.15s",
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "rgba(220,38,38,0.10)"; e.currentTarget.style.borderColor = "rgba(220,38,38,0.35)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = T.border; }}
+                      >
+                        {isRemoving
+                          ? <div style={{ width: 12, height: 12, borderRadius: "50%", border: "2px solid #ef4444", borderTopColor: "transparent", animation: "spin 0.7s linear infinite" }} />
+                          : <Trash2 size={13} color={T.red} />
+                        }
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -334,7 +402,6 @@ export default function MembersPanel() {
         </div>
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       {showInviteModal && <InviteMemberModal onClose={() => setShowInviteModal(false)} />}
     </>
   );

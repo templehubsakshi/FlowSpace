@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../services/api';
 
-//INtial state 
 const initialState = {
     workspaces: [],
     currentWorkspace: null,
@@ -9,7 +8,6 @@ const initialState = {
     error: null
 };
 
-//fetch all workspaces if it contains store in response otheresise return errror 
 export const fetchWorkspaces = createAsyncThunk(
     'workspace/fetchAll',
     async (_, { rejectWithValue }) => {
@@ -22,7 +20,6 @@ export const fetchWorkspaces = createAsyncThunk(
     }
 );
 
-//create workspace 
 export const createWorkspace = createAsyncThunk(
     'workspace/create',
     async ({ name, description }, { rejectWithValue }) => {
@@ -35,7 +32,6 @@ export const createWorkspace = createAsyncThunk(
     }
 );
 
-// get a worksapce
 export const fetchWorkspace = createAsyncThunk(
     'workspace/fetchOne',
     async (workspaceId, { rejectWithValue }) => {
@@ -48,7 +44,6 @@ export const fetchWorkspace = createAsyncThunk(
     }
 );
 
-//update workspace 
 export const updateWorkspace = createAsyncThunk(
     'workspace/update',
     async ({ workspaceId, data }, { rejectWithValue }) => {
@@ -61,7 +56,6 @@ export const updateWorkspace = createAsyncThunk(
     }
 );
 
-//delete workspace 
 export const deleteWorkspace = createAsyncThunk(
     'workspace/delete',
     async (workspaceId, { rejectWithValue }) => {
@@ -74,7 +68,6 @@ export const deleteWorkspace = createAsyncThunk(
     }
 );
 
-//Invite memeber 
 export const inviteMember = createAsyncThunk(
     'workspace/inviteMember',
     async ({ workspaceId, email, role }, { rejectWithValue }) => {
@@ -90,7 +83,6 @@ export const inviteMember = createAsyncThunk(
     }
 );
 
-//remove member
 export const removeMember = createAsyncThunk(
     'workspace/removeMember',
     async ({ workspaceId, memberId }, { rejectWithValue }) => {
@@ -103,7 +95,6 @@ export const removeMember = createAsyncThunk(
     }
 );
 
-//leave workspace
 export const leaveWorkspace = createAsyncThunk(
     'workspace/leave',
     async (workspaceId, { rejectWithValue }) => {
@@ -116,21 +107,32 @@ export const leaveWorkspace = createAsyncThunk(
     }
 );
 
-//kaunsa  workspace  open  hain  list  mein  kaunkauns  workspace  hain  loading error hain aur refresh hone par bhi workspace remember karta 
+// NEW: Owner kisi member ka role change kare — member → admin ya admin → member
+export const updateMemberRole = createAsyncThunk(
+    'workspace/updateMemberRole',
+    async ({ workspaceId, memberId, role }, { rejectWithValue }) => {
+        try {
+            const response = await api.patch(
+                `/workspaces/${workspaceId}/members/${memberId}/role`,
+                { role }
+            );
+            return response.data.workspace;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || error.message);
+        }
+    }
+);
 
 const workspaceSlice = createSlice({
     name: 'workspace',
     initialState,
-    reducers: {  //yaha wo kaam hota hain jo direct change the data 
-        setCurrentWorkspace: (state, action) => { //jab user koi workspace par click karta hain
-            state.currentWorkspace = action.payload; //use current workspace mein set kar do
+    reducers: {
+        setCurrentWorkspace: (state, action) => {
+            state.currentWorkspace = action.payload;
             if (action.payload) {
-                localStorage.setItem(
-                    'currentWorkspaceId',
-                    action.payload._id
-                ); //us workspace ki id ko browswe me sava kar lo taaki refresh hone par bhi rahe
+                localStorage.setItem('currentWorkspaceId', action.payload._id);
             } else {
-                localStorage.removeItem('currentWorkspaceId'); //agar null hain to hata do
+                localStorage.removeItem('currentWorkspaceId');
             }
         },
         clearError: (state) => {
@@ -138,35 +140,32 @@ const workspaceSlice = createSlice({
         }
     },
 
-    extraReducers: (builder) => { //api se data aane bala part yahan server se data aata jaata hin 
+    extraReducers: (builder) => {
 
-        //Fetch workspaces
+        // Fetch workspaces
         builder
-            .addCase(fetchWorkspaces.pending, (state) => { //jab kaam suru hota hain loading chalu puraan data hatta do
+            .addCase(fetchWorkspaces.pending, (state) => {
                 state.isLoading = true;
                 state.error = null;
             })
-            .addCase(fetchWorkspaces.fulfilled, (state, action) => { //jab kaam puraan ho jata hain to loading band kar do aur data set kar do
+            .addCase(fetchWorkspaces.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.workspaces = action.payload;
 
-                //auto select workspace 
                 if (action.payload.length > 0 && !state.currentWorkspace) {
                     const saveId = localStorage.getItem('currentWorkspaceId');
-
                     const workspace = saveId
                         ? action.payload.find(w => w._id === saveId)
                         : action.payload[0];
-
                     state.currentWorkspace = workspace || action.payload[0];
                 }
             })
-            .addCase(fetchWorkspaces.rejected, (state, action) => { //jab kaam fail ho jata hain to loading band kar do aur error set kar do
+            .addCase(fetchWorkspaces.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload;
             });
 
-        //create workspace
+        // Create workspace
         builder
             .addCase(createWorkspace.pending, (state) => {
                 state.isLoading = true;
@@ -183,56 +182,41 @@ const workspaceSlice = createSlice({
                 state.error = action.payload;
             });
 
-        //fetch single workspace
+        // Fetch single workspace
         builder
             .addCase(fetchWorkspace.fulfilled, (state, action) => {
                 state.currentWorkspace = action.payload;
-                //upadte in list too
-                const index = state.workspaces.findIndex(
-                    w => w._id === action.payload._id
-                );
-                if (index !== -1) {
-                    state.workspaces[index] = action.payload;
-                }
+                const index = state.workspaces.findIndex(w => w._id === action.payload._id);
+                if (index !== -1) state.workspaces[index] = action.payload;
             });
 
-        //update workspace 
+        // Update workspace
         builder
             .addCase(updateWorkspace.fulfilled, (state, action) => {
-                const index = state.workspaces.findIndex(
-                    w => w._id === action.payload._id
-                );
-                if (index !== -1) {
-                    state.workspaces[index] = action.payload;
-                }
+                const index = state.workspaces.findIndex(w => w._id === action.payload._id);
+                if (index !== -1) state.workspaces[index] = action.payload;
                 if (state.currentWorkspace?._id === action.payload._id) {
                     state.currentWorkspace = action.payload;
                 }
             });
 
-        //delete workspace 
+        // Delete workspace
         builder
             .addCase(deleteWorkspace.fulfilled, (state, action) => {
-                state.workspaces = state.workspaces.filter(
-                    w => w._id !== action.payload
-                );
+                state.workspaces = state.workspaces.filter(w => w._id !== action.payload);
                 if (state.currentWorkspace?._id === action.payload) {
                     state.currentWorkspace = state.workspaces[0] || null;
                 }
             });
 
-        //Invite member 
+        // Invite member
         builder
             .addCase(inviteMember.fulfilled, (state, action) => {
                 if (state.currentWorkspace?._id === action.payload._id) {
                     state.currentWorkspace = action.payload;
                 }
-                const index = state.workspaces.findIndex(
-                    w => w._id === action.payload._id
-                );
-                if (index !== -1) {
-                    state.workspaces[index] = action.payload;
-                }
+                const index = state.workspaces.findIndex(w => w._id === action.payload._id);
+                if (index !== -1) state.workspaces[index] = action.payload;
             });
 
         // Remove member
@@ -249,12 +233,21 @@ const workspaceSlice = createSlice({
         // Leave workspace
         builder
             .addCase(leaveWorkspace.fulfilled, (state, action) => {
-                state.workspaces = state.workspaces.filter(
-                    w => w._id !== action.payload
-                );
+                state.workspaces = state.workspaces.filter(w => w._id !== action.payload);
                 if (state.currentWorkspace?._id === action.payload) {
                     state.currentWorkspace = state.workspaces[0] || null;
                 }
+            });
+
+        // Update member role — server updated workspace return karta hai,
+        // dono currentWorkspace aur workspaces list update karo
+        builder
+            .addCase(updateMemberRole.fulfilled, (state, action) => {
+                if (state.currentWorkspace?._id === action.payload._id) {
+                    state.currentWorkspace = action.payload;
+                }
+                const index = state.workspaces.findIndex(w => w._id === action.payload._id);
+                if (index !== -1) state.workspaces[index] = action.payload;
             });
     }
 });

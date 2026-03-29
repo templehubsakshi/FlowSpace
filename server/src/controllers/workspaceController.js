@@ -1,4 +1,3 @@
-
 const Workspace = require('../models/Workspace');
 const User = require('../models/User');
 const Task = require('../models/Task');
@@ -74,19 +73,13 @@ exports.updateWorkspace = async (req, res) => {
 };
 
 // ── Delete workspace (owner only) ──────────────────────────────────────────
-// ✅ FIX: Added cascade delete for tasks + notifications
 exports.deleteWorkspace = async (req, res) => {
   try {
     const workspace = req.workspace;
     const workspaceId = workspace._id;
 
-    // ✅ Cascade: delete all tasks in this workspace
     await Task.deleteMany({ workspace: workspaceId });
-
-    // ✅ Cascade: delete all notifications related to this workspace
     await Notification.deleteMany({ workspace: workspaceId });
-
-    // Delete the workspace itself
     await Workspace.findByIdAndDelete(workspaceId);
 
     res.json({ success: true, message: 'Workspace deleted successfully' });
@@ -107,7 +100,6 @@ exports.inviteMember = async (req, res) => {
     const alreadyMember = workspace.members.some(m => m.user.toString() === user._id.toString());
     if (alreadyMember) return res.status(400).json({ message: 'User is already a member' });
 
-    // ✅ owner role cannot be assigned via invite
     const newRole = role && role.toLowerCase() === 'admin' ? 'admin' : 'member';
 
     workspace.members.push({ user: user._id, role: newRole });
@@ -115,6 +107,41 @@ exports.inviteMember = async (req, res) => {
     await workspace.populate('members.user', 'name email');
 
     res.json({ success: true, message: `${user.name} added to workspace as ${newRole}`, workspace });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ── Update member role (owner only) ────────────────────────────────────────
+// Owner kisi bhi member ko admin bana sakta hai ya wapas member kar sakta hai.
+// Admin apna ya kisi aur ka role nahi badal sakta.
+// Owner ka role koi nahi badal sakta.
+exports.updateMemberRole = async (req, res) => {
+  try {
+    const { memberId } = req.params;
+    const { role } = req.body;
+    const workspace = req.workspace;
+
+    // Sirf 'admin' ya 'member' allowed — 'owner' assign nahi ho sakta
+    if (!['admin', 'member'].includes(role)) {
+      return res.status(400).json({ message: "Role must be 'admin' or 'member'" });
+    }
+
+    // Owner ka role change nahi ho sakta
+    if (workspace.owner.toString() === memberId) {
+      return res.status(400).json({ message: 'Cannot change the role of the workspace owner' });
+    }
+
+    const member = workspace.members.find(m => m.user.toString() === memberId);
+    if (!member) {
+      return res.status(404).json({ message: 'Member not found in this workspace' });
+    }
+
+    member.role = role;
+    await workspace.save();
+    await workspace.populate('members.user', 'name email');
+
+    res.json({ success: true, message: `Role updated to ${role}`, workspace });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

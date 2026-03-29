@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { setCurrentWorkspace } from "../redux/slices/workspaceSlice";
 import CreateWorkspaceModal from "./CreateWorkspaceModal";
 import WorkspaceSettingsModal from "./WorkspaceSettingsModal";
+import InviteMemberModal from "./InviteMemberModal";
 import ThemeToggle from "./ThemeToggle";
 import { Plus, Check, Users, Settings } from "lucide-react";
 
@@ -23,6 +24,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
 
   const [showCreateModal,   setShowCreateModal]   = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showInviteModal,   setShowInviteModal]   = useState(false);
   const [hoveredGear,       setHoveredGear]       = useState(false);
 
   const handleWsChange = (ws) => {
@@ -31,6 +33,15 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
   };
 
   const userInitial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
+
+  // FIX: Check current user's role in the currently active workspace.
+  // Previously "Invite Members" was shown to everyone — member, admin, owner alike.
+  // Now it only appears for owner or admin.
+  const myId = user?.id || user?._id;
+  const myRole = currentWorkspace?.members?.find(
+    m => (m.user?._id || m.user) === myId
+  )?.role;
+  const canInvite = ['owner', 'admin'].includes(myRole);
 
   return (
     <>
@@ -125,7 +136,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
                 onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--surface2)'; }}
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
               >
-                {/* Active indicator bar */}
                 {isActive && (
                   <div style={{
                     position: 'absolute', left: 0, top: 5, bottom: 5, width: 3,
@@ -135,7 +145,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
                   }}/>
                 )}
 
-                {/* Workspace icon */}
                 <div style={{
                   width: 30, height: 30, borderRadius: 8, flexShrink: 0,
                   background: WS_GRADIENTS[i % WS_GRADIENTS.length],
@@ -146,7 +155,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
                   {ws.name.charAt(0).toUpperCase()}
                 </div>
 
-                {/* Name + members */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
                     fontWeight: isActive ? 600 : 500, fontSize: 13,
@@ -165,7 +173,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
                   </div>
                 </div>
 
-                {/* Settings + check for active workspace */}
                 {isActive && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                     <button
@@ -213,29 +220,34 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
           padding: '10px 10px 12px', flexShrink: 0,
         }}>
 
-          {/* Invite Members */}
-          <div
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '7px 8px', borderRadius: 8,
-              color: 'var(--text-tertiary)', cursor: 'pointer', fontSize: 13,
-              fontWeight: 500, letterSpacing: '-0.01em',
-              transition: 'background 0.12s, color 0.12s',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'var(--surface2)';
-              e.currentTarget.style.color = 'var(--text-primary)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = 'var(--text-tertiary)';
-            }}
-          >
-            <Users size={14} style={{ opacity: 0.75 }}/>
-            Invite Members
-          </div>
+          {/* FIX: Invite Members — sirf owner ya admin ko dikhao.
+              Pehle yeh button sabko dikhta tha (member ko bhi), jo click karne
+              pe silently 403 deta tha. Ab canInvite false hone par button
+              render hi nahi hoga — member ko yeh option nahi dikhega. */}
+          {canInvite && (
+            <div
+              onClick={() => setShowInviteModal(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '7px 8px', borderRadius: 8,
+                color: 'var(--text-tertiary)', cursor: 'pointer', fontSize: 13,
+                fontWeight: 500, letterSpacing: '-0.01em',
+                transition: 'background 0.12s, color 0.12s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'var(--surface2)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = 'var(--text-tertiary)';
+              }}
+            >
+              <Users size={14} style={{ opacity: 0.75 }}/>
+              Invite Members
+            </div>
+          )}
 
-          {/* ✅ Theme toggle — now actually works */}
           <div style={{ padding: '5px 8px' }}>
             <ThemeToggle />
           </div>
@@ -250,7 +262,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
             onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
-            {/* Avatar */}
             <div style={{
               width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
               background: 'linear-gradient(135deg,#6366f1,#ec4899)',
@@ -261,7 +272,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
               {userInitial}
             </div>
 
-            {/* Name + email */}
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{
                 fontSize: 12.5, fontWeight: 600, letterSpacing: '-0.015em',
@@ -285,12 +295,11 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
         </div>
       </aside>
 
-      {showCreateModal && (
-        <CreateWorkspaceModal onClose={() => setShowCreateModal(false)}/>
-      )}
+      {showCreateModal  && <CreateWorkspaceModal onClose={() => setShowCreateModal(false)}/>}
       {showSettingsModal && currentWorkspace && (
         <WorkspaceSettingsModal onClose={() => setShowSettingsModal(false)}/>
       )}
+      {showInviteModal && <InviteMemberModal onClose={() => setShowInviteModal(false)}/>}
     </>
   );
 }
