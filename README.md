@@ -89,6 +89,26 @@
 - Adaptive stats grids and chart sizing
 
 ---
+## 📸 Screenshots
+
+## 📸 Screenshots
+
+### 📋 Kanban Board
+![Board](./screenshots/board.png)
+
+### 📊 Analytics Dashboard
+![Analytics](./screenshots/analytics.png)
+
+### 📈 Insights & Performance
+| Weekly Activity | Task Distribution |
+|----------------|------------------|
+| ![](./screenshots/stat2.png) | ![](./screenshots/stat3.png) |
+
+### 👥 Team Members
+![Members](./screenshots/member.png)
+
+### 📅 Calendar View
+![Calendar](./screenshots/calendar.png)
 
 ## 🛠️ Tech Stack
 
