@@ -3,6 +3,9 @@
 <img src="https://img.shields.io/badge/FlowSpace-Real--time%20Collaboration-6366f1?style=for-the-badge&logo=lightning&logoColor=white" alt="FlowSpace" />
 
 # ⚡ FlowSpace
+## 🚀 Preview
+
+![Board](./screenshots/board1.PNG)
 
 ### Real-time Collaborative Task Management — Built for Modern Teams
 
@@ -23,6 +26,12 @@
 
 > Built as a production-grade MERN stack project with httpOnly cookie auth, role-based access control, real-time sync across all connected clients, and a responsive UI that works seamlessly from mobile to desktop.
 
+## 💡 Problem & Solution
+
+Traditional task management tools lack real-time collaboration, causing delays and inconsistent task states.
+
+FlowSpace solves this using WebSockets (Socket.IO), enabling instant synchronization across all users with optimistic UI updates for a seamless experience.
+
 ---
 
 ## 🌐 Live Demo
@@ -31,8 +40,8 @@
 
 | Test Account | Credentials |
 |---|---|
-| Owner | `yuvraj@demo.com` / `demo123` |
-| Member | `sakshu@demo.com` / `demo123` |
+| Owner | `yuvi@gmail.com` / `123456` |
+| Member | `sakshi.2327cse1279@kiet.edu` / `123456` |
 
 ---
 
@@ -89,6 +98,15 @@
 - Adaptive stats grids and chart sizing
 
 ---
+
+## ⚡ Key Technical Highlights
+
+- Real-time communication using Socket.IO (workspace-based rooms)
+- Optimistic UI updates for instant user experience
+- Secure authentication using JWT + httpOnly cookies
+- Role-based access control system
+- Modular and scalable backend architecture
+
 ## 📸 Screenshots
 
 ### 📋 Kanban Board
@@ -111,6 +129,18 @@
 ### 🔔 Notifications Panel
 ![Notifications](./screenshots/notification.PNG)
 
+
+## ⚡ Challenges & Solutions
+
+- **Real-time consistency**
+  - Solved using partial socket updates instead of full object replacement
+
+- **Duplicate notifications**
+  - Managed by separating global and local socket listeners
+
+- **Secure authentication**
+  - Implemented httpOnly cookie-based JWT to prevent XSS attacks
+  
 ## 🛠️ Tech Stack
 
 ### Frontend
