@@ -107,6 +107,10 @@
 
 ### 📅 Calendar View
 ![Calendar](./screenshots/calendar.PNG)
+
+### 🔔 Notifications Panel
+![Notifications](./screenshots/notification.PNG)
+
 ## 🛠️ Tech Stack
 
 ### Frontend
