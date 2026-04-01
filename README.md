@@ -91,25 +91,22 @@
 ---
 ## 📸 Screenshots
 
-## 📸 Screenshots
-
 ### 📋 Kanban Board
-![Board](./screenshots/board.png)
+![Board](./screenshots/board.PNG)
 
 ### 📊 Analytics Dashboard
-![Analytics](./screenshots/analytics.png)
+![Analytics](./screenshots/analytics.PNG)
 
 ### 📈 Insights & Performance
 | Weekly Activity | Task Distribution |
 |----------------|------------------|
-| ![](./screenshots/stat2.png) | ![](./screenshots/stat3.png) |
+| ![](./screenshots/stat2.PNG) | ![](./screenshots/stat3.PNG) |
 
 ### 👥 Team Members
-![Members](./screenshots/member.png)
+![Members](./screenshots/member.PNG)
 
 ### 📅 Calendar View
-![Calendar](./screenshots/calendar.png)
-
+![Calendar](./screenshots/calendar.PNG)
 ## 🛠️ Tech Stack
 
 ### Frontend
