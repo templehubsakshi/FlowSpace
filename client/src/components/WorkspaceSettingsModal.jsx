@@ -94,8 +94,8 @@ export default function WorkspaceSettingsModal({ onClose }) {
     } else { setDeleteStep(2); toast.error(result.payload||'Failed to delete workspace'); }
   };
 
-  const taskBuckets = useSelector(s => s.tasks?.tasks??{ todo:[],in_progress:[],done:[] });
-  const tasks = [...(taskBuckets.todo||[]),...(taskBuckets.in_progress||[]),...(taskBuckets.done||[])];
+  const taskBuckets = useSelector(s => s.tasks?.tasks??{ todo:[], "in-progress":[], done:[] });
+  const tasks = [...(taskBuckets.todo||[]),...(taskBuckets["in-progress"]||[]),...(taskBuckets.done||[])];
 
   const exportJSON = () => {
     const data = { workspace:{ name:currentWorkspace.name, description:currentWorkspace.description, members:currentWorkspace.members?.map(m=>({ name:m.user?.name, email:m.user?.email, role:m.role })), exportedAt:new Date().toISOString() }, tasks:tasks.map(t=>({ title:t.title,description:t.description,status:t.status,priority:t.priority,assignee:t.assignee?.name??null,dueDate:t.dueDate??null,tags:t.tags??[],createdAt:t.createdAt })) };

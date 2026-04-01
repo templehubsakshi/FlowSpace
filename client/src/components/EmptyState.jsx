@@ -8,7 +8,7 @@ const VARIANTS = {
     border: 'rgba(129,140,248,0.18)',
     glow:   'rgba(129,140,248,0.12)',
   },
-  in_progress: {
+  'in-progress': {
     Icon:   Zap,
     color:  'var(--status-progress)',
     bg:     'rgba(251,191,36,0.10)',

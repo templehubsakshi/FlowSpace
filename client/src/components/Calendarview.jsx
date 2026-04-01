@@ -18,7 +18,7 @@ const DAYS_MINI  = ['S','M','T','W','T','F','S'];
 
 const STATUS_CFG = {
   todo:        { bg:'rgba(59,130,246,0.12)',  text:'#3b82f6', Icon: Circle,       label:'To Do'       },
-  in_progress: { bg:'rgba(245,158,11,0.12)', text:'#f59e0b', Icon: Zap,          label:'In Progress' },
+  'in-progress': { bg:'rgba(245,158,11,0.12)', text:'#f59e0b', Icon: Zap,          label:'In Progress' },
   done:        { bg:'rgba(16,185,129,0.12)', text:'#10b981', Icon: CheckCircle2, label:'Done'        },
 };
 const PRIORITY_DOT = {
@@ -160,10 +160,10 @@ export default function CalendarView() {
   const [showUpcoming,setShowUpcoming]=useState(false);
   const [showFilter,setShowFilter]=useState(false);
 
-  const allTasks=useMemo(()=>[...(tasks.todo||[]),...(tasks.in_progress||[]),...(tasks.done||[])],[tasks]);
+  const allTasks=useMemo(()=>[...(tasks.todo||[]),...(tasks['in-progress']||[]),...(tasks.done||[])],[tasks]);
   const visibleTasks=useMemo(()=>filterStatus==='all'?allTasks:allTasks.filter(t=>t.status===filterStatus),[allTasks,filterStatus]);
   const tasksByDate=useMemo(()=>{const map={};visibleTasks.forEach(t=>{if(!t.dueDate)return;const k=dateKey(new Date(t.dueDate));(map[k]=map[k]||[]).push(t);});return map;},[visibleTasks]);
-  const stats=useMemo(()=>{const mt=allTasks.filter(t=>{if(!t.dueDate)return false;const d=new Date(t.dueDate);return d.getFullYear()===year&&d.getMonth()===month;});return{total:mt.length,done:mt.filter(t=>t.status==='done').length,active:mt.filter(t=>t.status==='in_progress').length,overdue:mt.filter(t=>t.status!=='done'&&isPastDay(new Date(t.dueDate))).length};},[allTasks,year,month]);
+  const stats=useMemo(()=>{const mt=allTasks.filter(t=>{if(!t.dueDate)return false;const d=new Date(t.dueDate);return d.getFullYear()===year&&d.getMonth()===month;});return{total:mt.length,done:mt.filter(t=>t.status==='done').length,active:mt.filter(t=>t.status==='in-progress').length,overdue:mt.filter(t=>t.status!=='done'&&isPastDay(new Date(t.dueDate))).length};},[allTasks,year,month]);
 
   const prevPeriod=()=>{if(view==='month'){if(month===0){setMonth(11);setYear(y=>y-1);}else setMonth(m=>m-1);}else{const d=new Date(weekRef);d.setDate(d.getDate()-7);setWeekRef(d);}};
   const nextPeriod=()=>{if(view==='month'){if(month===11){setMonth(0);setYear(y=>y+1);}else setMonth(m=>m+1);}else{const d=new Date(weekRef);d.setDate(d.getDate()+7);setWeekRef(d);}};
@@ -217,7 +217,7 @@ export default function CalendarView() {
           ):(
             <>
               <div style={{display:'flex',gap:2,background:'var(--surface-sunken)',border:'1px solid var(--border-default)',borderRadius:8,padding:2}}>
-                {[{k:'all',l:'All'},{k:'todo',l:'To Do'},{k:'in_progress',l:'Active'},{k:'done',l:'Done'}].map(({k,l})=>(
+                {[{k:'all',l:'All'},{k:'todo',l:'To Do'},{k:'in-progress', l:'Active'},{k:'done',l:'Done'}].map(({k,l})=>(
                   <button key={k} onClick={()=>setFilterStatus(k)} style={segBtn(filterStatus===k)}>{l}</button>
                 ))}
               </div>
@@ -238,7 +238,7 @@ export default function CalendarView() {
 
       {isMobile&&showFilter&&(
         <div style={{display:'flex',gap:2,background:'var(--surface-sunken)',border:'1px solid var(--border-default)',borderRadius:8,padding:2,animation:'fadeIn 0.15s ease-out'}}>
-          {[{k:'all',l:'All'},{k:'todo',l:'To Do'},{k:'in_progress',l:'Active'},{k:'done',l:'Done'}].map(({k,l})=>(
+          {[{k:'all',l:'All'},{k:'todo',l:'To Do'},{k:'in-progress', l:'Active'},{k:'done',l:'Done'}].map(({k,l})=>(
             <button key={k} onClick={()=>{setFilterStatus(k);setShowFilter(false);}} style={{...segBtn(filterStatus===k),flex:1}}>{l}</button>
           ))}
         </div>

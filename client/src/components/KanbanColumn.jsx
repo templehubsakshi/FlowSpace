@@ -7,7 +7,7 @@ import { useThemeColors } from '../hooks/useTheme';
 
 const COL_CFG = {
   todo:        { dot:'#6b7280', dotShadow:'rgba(107,114,128,0.7)', label:'TO DO',       labelColor:'#9ca3af', badgeBg:'rgba(107,114,128,0.2)', badgeColor:'#9ca3af', badgeBorder:'rgba(107,114,128,0.28)', borderHover:'rgba(107,114,128,0.6)', addHoverBg:'rgba(107,114,128,0.08)', dropGlow:'rgba(107,114,128,0.3)' },
-  in_progress: { dot:'#6366f1', dotShadow:'rgba(99,102,241,0.75)',  label:'IN PROGRESS', labelColor:'#818cf8', badgeBg:'rgba(99,102,241,0.18)',  badgeColor:'#818cf8', badgeBorder:'rgba(99,102,241,0.3)',  borderHover:'rgba(99,102,241,0.65)', addHoverBg:'rgba(99,102,241,0.08)',  dropGlow:'rgba(99,102,241,0.35)'  },
+  "in-progress": { dot:'#6366f1', dotShadow:'rgba(99,102,241,0.75)',  label:'IN PROGRESS', labelColor:'#818cf8', badgeBg:'rgba(99,102,241,0.18)',  badgeColor:'#818cf8', badgeBorder:'rgba(99,102,241,0.3)',  borderHover:'rgba(99,102,241,0.65)', addHoverBg:'rgba(99,102,241,0.08)',  dropGlow:'rgba(99,102,241,0.35)'  },
   done:        { dot:'#10b981', dotShadow:'rgba(16,185,129,0.75)',  label:'DONE',        labelColor:'#10b981', badgeBg:'rgba(16,185,129,0.18)',  badgeColor:'#10b981', badgeBorder:'rgba(16,185,129,0.3)',  borderHover:'rgba(16,185,129,0.6)', addHoverBg:'rgba(16,185,129,0.08)',  dropGlow:'rgba(16,185,129,0.3)'   },
 };
 
@@ -56,7 +56,7 @@ export default function KanbanColumn({ status, title, tasks, onTaskClick, onAddT
             <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, padding:'36px 20px 28px', textAlign:'center', animation: isOver?'col-pulse 0.8s ease-in-out infinite alternate':'none' }}>
               <style>{`@keyframes col-pulse { from{opacity:0.5} to{opacity:1} }`}</style>
               <div style={{ width:40, height:40, borderRadius:11, background: isOver?`${cfg.dot}18`:T.border, border:`1px solid ${isOver?cfg.dot+'55':T.border2}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, transition:'all 0.18s' }}>
-                {status==='done'?'✅':status==='in_progress'?'⚡':'📋'}
+                {status==='done'?'✅':status==='in-progress'?'⚡':'📋'}
               </div>
               <div>
                 <p style={{ color:isOver?cfg.labelColor:T.muted, fontSize:12.5, fontWeight:600, marginBottom:3, transition:'color 0.18s' }}>{isOver?'Drop here':'No tasks yet'}</p>

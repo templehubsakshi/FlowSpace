@@ -7,7 +7,7 @@ export default function KanbanBoardSkeleton() {
       shimmer: 'bg-slate-200 dark:bg-slate-700'
     },
     { 
-      id: 'in_progress', 
+      id: 'in-progress', 
       title: 'In Progress', 
       gradient: 'from-indigo-600 to-indigo-700',
       shimmer: 'bg-indigo-100 dark:bg-indigo-900/30'

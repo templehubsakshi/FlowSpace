@@ -11,7 +11,7 @@ const PRIORITY = {
 };
 const STATUS = {
   todo:        { color: "#64748b", bg: "rgba(100,116,139,0.13)", border: "rgba(100,116,139,0.2)", label: "To Do" },
-  in_progress: { color: "#f59e0b", bg: "rgba(245,158,11,0.13)",  border: "rgba(245,158,11,0.2)",  label: "In Progress" },
+  "in-progress": { color: "#f59e0b", bg: "rgba(245,158,11,0.13)",  border: "rgba(245,158,11,0.2)",  label: "In Progress" },
   done:        { color: "#34d399", bg: "rgba(16,185,129,0.13)",  border: "rgba(16,185,129,0.2)",  label: "Done" },
 };
 const TAG_PALETTE = [

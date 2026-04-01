@@ -1,7 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Clock, MessageSquare, AlertCircle, GripVertical, Trash2, Eye } from 'lucide-react';
-import { memo, useState, useMemo } from 'react';
+import { memo, useState, useMemo, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useThemeColors } from '../hooks/useTheme';
 
@@ -27,16 +27,32 @@ const getTag = t => TAG_COLORS[t?.toLowerCase()] ?? { bg:'rgba(99,102,241,0.15)'
 function TaskCard({ task, onClick, onDelete, workspaceId }) {
   const T = useThemeColors();
   const [hovered, setHovered] = useState(false);
-  const { user }  = useSelector(s => s.auth);
-  const isMobile  = useMemo(() => window.innerWidth < 768, []);
+  const { user } = useSelector(s => s.auth);
+
+  // FIX: isMobile should update on resize, not just on mount
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task._id });
 
-  const p         = PRIORITY[task.priority] ?? PRIORITY.medium;
+  const p = PRIORITY[task.priority] ?? PRIORITY.medium;
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date();
-  const canDelete = task.createdBy === user?._id || user?.role === 'admin';
-  const showAct   = isMobile || hovered;
+
+  // FIX: task.creator can be either a populated object { _id, name }
+  // or a plain ObjectId string (when not populated by backend).
+  // Both cases handled here.
+  const creatorId = task.creator?._id ?? task.creator;
+  const userId    = user?._id ?? user?.id;
+  const canDelete = creatorId && userId && String(creatorId) === String(userId);
+
+  // FIX: on mobile, always show actions. On desktop, show on hover.
+  // Also show permanently when card is being dragged so drag handle is visible.
+  const showAct = isMobile || hovered;
 
   const handleDelete = async e => {
     e.stopPropagation();
@@ -45,7 +61,11 @@ function TaskCard({ task, onClick, onDelete, workspaceId }) {
   };
 
   return (
-    <div ref={setNodeRef} {...attributes} {...listeners} onClick={onClick}
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      onClick={onClick}
       onMouseEnter={() => !isMobile && setHovered(true)}
       onMouseLeave={() => !isMobile && setHovered(false)}
       style={{
@@ -59,86 +79,154 @@ function TaskCard({ task, onClick, onDelete, workspaceId }) {
         boxShadow: hovered
           ? `0 0 0 1px ${p.border}, 0 10px 36px rgba(0,0,0,0.15), 0 0 20px ${p.glow}`
           : `0 2px 8px rgba(0,0,0,0.06)`,
+      }}
+    >
+      {/* Action buttons — Eye always visible on hover, Delete only if canDelete */}
+      <div style={{
+        position: 'absolute', top: 9, right: 9, zIndex: 10,
+        display: 'flex', alignItems: 'center', gap: 4,
+        opacity: showAct ? 1 : 0,
+        transform: showAct ? 'translateY(0)' : 'translateY(-4px)',
+        transition: 'opacity 0.15s, transform 0.15s',
+        pointerEvents: showAct ? 'auto' : 'none',
       }}>
+        {/* View button — always shown */}
+        <button
+          onClick={e => { e.stopPropagation(); onClick(); }}
+          style={{
+            width: 25, height: 25, borderRadius: 7, border: 'none',
+            cursor: 'pointer', background: 'rgba(99,102,241,0.9)',
+            color: 'white', display: 'grid', placeItems: 'center',
+            boxShadow: '0 2px 8px rgba(99,102,241,0.5)', transition: 'transform 0.1s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.12)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <Eye size={11} />
+        </button>
 
-      {/* Action buttons */}
-      <div style={{ position:'absolute', top:9, right:9, zIndex:10, display:'flex', alignItems:'center', gap:4, opacity:showAct?1:0, transform:showAct?'translateY(0)':'translateY(-4px)', transition:'opacity 0.15s, transform 0.15s' }}>
-        <button onClick={e=>{e.stopPropagation();onClick();}}
-          style={{ width:25, height:25, borderRadius:7, border:'none', cursor:'pointer', background:'rgba(99,102,241,0.9)', color:'white', display:'grid', placeItems:'center', boxShadow:'0 2px 8px rgba(99,102,241,0.5)', transition:'transform 0.1s' }}
-          onMouseEnter={e=>e.currentTarget.style.transform='scale(1.12)'}
-          onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}
-        ><Eye size={11}/></button>
+        {/* Delete button — only if this user created the task */}
         {canDelete && (
-          <button onClick={handleDelete}
-            style={{ width:25, height:25, borderRadius:7, border:'none', cursor:'pointer', background:'rgba(239,68,68,0.9)', color:'white', display:'grid', placeItems:'center', boxShadow:'0 2px 8px rgba(239,68,68,0.45)', transition:'transform 0.1s' }}
-            onMouseEnter={e=>e.currentTarget.style.transform='scale(1.12)'}
-            onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}
-          ><Trash2 size={11}/></button>
+          <button
+            onClick={handleDelete}
+            style={{
+              width: 25, height: 25, borderRadius: 7, border: 'none',
+              cursor: 'pointer', background: 'rgba(239,68,68,0.9)',
+              color: 'white', display: 'grid', placeItems: 'center',
+              boxShadow: '0 2px 8px rgba(239,68,68,0.45)', transition: 'transform 0.1s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.12)'}
+            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            <Trash2 size={11} />
+          </button>
         )}
-        <div style={{ padding:'4px 2px', opacity:0.3, cursor:'grab' }}>
-          <GripVertical size={11} color={T.dim}/>
+
+        {/* Drag handle */}
+        <div style={{ padding: '4px 2px', opacity: 0.3, cursor: 'grab' }}>
+          <GripVertical size={11} color={T.dim} />
         </div>
       </div>
 
-      <div style={{ position:'relative', zIndex:2 }}>
+      <div style={{ position: 'relative', zIndex: 2 }}>
         {/* Priority row */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-            <div style={{ width:8, height:8, borderRadius:'50%', flexShrink:0, background:p.dot, boxShadow:`0 0 6px ${p.glow}` }}/>
-            <span style={{ fontSize:10.5, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.07em', color:p.color, fontFamily:"'Plus Jakarta Sans', sans-serif" }}>{p.label}</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: p.dot, boxShadow: `0 0 6px ${p.glow}` }} />
+            <span style={{ fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: p.color, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{p.label}</span>
           </div>
           {isOverdue && (
-            <div style={{ display:'flex', alignItems:'center', gap:3, background:'rgba(239,68,68,0.13)', border:'1px solid rgba(239,68,68,0.28)', borderRadius:20, padding:'2px 7px' }}>
-              <AlertCircle size={9} color="#ef4444"/>
-              <span style={{ fontSize:9.5, fontWeight:700, color:'#ef4444' }}>Overdue</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'rgba(239,68,68,0.13)', border: '1px solid rgba(239,68,68,0.28)', borderRadius: 20, padding: '2px 7px' }}>
+              <AlertCircle size={9} color="#ef4444" />
+              <span style={{ fontSize: 9.5, fontWeight: 700, color: '#ef4444' }}>Overdue</span>
             </div>
           )}
         </div>
 
         {/* Title */}
-        <h3 style={{ fontWeight:600, fontSize:13.5, lineHeight:1.4, letterSpacing:'-0.025em', color:T.text, marginBottom:task.description?5:0, paddingRight:showAct?72:0, overflow:'hidden', display:'-webkit-box', WebkitBoxOrient:'vertical', WebkitLineClamp:2, fontFamily:"'Inter', sans-serif" }}>
+        <h3 style={{
+          fontWeight: 600, fontSize: 13.5, lineHeight: 1.4,
+          letterSpacing: '-0.025em', color: T.text,
+          marginBottom: task.description ? 5 : 0,
+          paddingRight: showAct ? 72 : 0,
+          overflow: 'hidden', display: '-webkit-box',
+          WebkitBoxOrient: 'vertical', WebkitLineClamp: 2,
+          fontFamily: "'Inter', sans-serif",
+        }}>
           {task.title}
         </h3>
 
         {/* Description */}
         {task.description && (
-          <p style={{ fontSize:12, color:T.muted, lineHeight:1.5, marginBottom:9, letterSpacing:'-0.01em', overflow:'hidden', display:'-webkit-box', WebkitBoxOrient:'vertical', WebkitLineClamp:2 }}>
+          <p style={{
+            fontSize: 12, color: T.muted, lineHeight: 1.5,
+            marginBottom: 9, letterSpacing: '-0.01em',
+            overflow: 'hidden', display: '-webkit-box',
+            WebkitBoxOrient: 'vertical', WebkitLineClamp: 2,
+          }}>
             {task.description}
           </p>
         )}
 
         {/* Tags */}
         {task.tags?.length > 0 && (
-          <div style={{ display:'flex', flexWrap:'wrap', gap:5, marginBottom:10, marginTop:task.description?0:8 }}>
-            {task.tags.slice(0,3).map((tag,i) => {
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10, marginTop: task.description ? 0 : 8 }}>
+            {task.tags.slice(0, 3).map((tag, i) => {
               const ts = getTag(tag);
-              return <span key={i} style={{ padding:'2px 9px', borderRadius:20, fontSize:11, fontWeight:600, background:ts.bg, color:ts.color, border:`1px solid ${ts.border}` }}>{tag}</span>;
+              return (
+                <span key={i} style={{ padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: ts.bg, color: ts.color, border: `1px solid ${ts.border}` }}>
+                  {tag}
+                </span>
+              );
             })}
-            {task.tags.length > 3 && <span style={{ padding:'2px 9px', borderRadius:20, fontSize:11, fontWeight:600, background:T.border, color:T.muted, border:`1px solid ${T.border2}` }}>+{task.tags.length-3}</span>}
+            {task.tags.length > 3 && (
+              <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: T.border, color: T.muted, border: `1px solid ${T.border2}` }}>
+                +{task.tags.length - 3}
+              </span>
+            )}
           </div>
         )}
 
         {/* Footer */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingTop:9, borderTop:`1px solid ${T.border}`, marginTop:task.tags?.length?0:8 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          paddingTop: 9, borderTop: `1px solid ${T.border}`,
+          marginTop: task.tags?.length ? 0 : 8,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {task.assignee && (
-              <div style={{ display:'flex', alignItems:'center', gap:5 }}>
-                <div style={{ width:22, height:22, borderRadius:'50%', flexShrink:0, background:'linear-gradient(135deg,#6366f1,#ec4899)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:9.5, fontWeight:700, color:'white', boxShadow:'0 0 0 1.5px rgba(99,102,241,0.3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div style={{
+                  width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                  background: 'linear-gradient(135deg,#6366f1,#ec4899)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 9.5, fontWeight: 700, color: 'white',
+                  boxShadow: '0 0 0 1.5px rgba(99,102,241,0.3)',
+                }}>
                   {task.assignee.name.charAt(0).toUpperCase()}
                 </div>
-                <span style={{ fontSize:11.5, color:T.muted, fontWeight:500 }}>{task.assignee.name.split(' ')[0]}</span>
+                <span style={{ fontSize: 11.5, color: T.muted, fontWeight: 500 }}>
+                  {task.assignee.name.split(' ')[0]}
+                </span>
               </div>
             )}
             {task.comments?.length > 0 && (
-              <div style={{ display:'flex', alignItems:'center', gap:3, color:T.muted }}>
-                <MessageSquare size={10.5}/><span style={{ fontSize:11, fontWeight:600 }}>{task.comments.length}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: T.muted }}>
+                <MessageSquare size={10.5} />
+                <span style={{ fontSize: 11, fontWeight: 600 }}>{task.comments.length}</span>
               </div>
             )}
           </div>
           {task.dueDate && (
-            <div style={{ display:'flex', alignItems:'center', gap:4, padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:500, background:isOverdue?'rgba(239,68,68,0.13)':T.border, color:isOverdue?'#ef4444':T.muted, border:`1px solid ${isOverdue?'rgba(239,68,68,0.28)':T.border2}` }}>
-              <Clock size={9.5}/>
-              {new Date(task.dueDate).toLocaleDateString('en-US',{month:'short',day:'numeric'})}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 500,
+              background: isOverdue ? 'rgba(239,68,68,0.13)' : T.border,
+              color: isOverdue ? '#ef4444' : T.muted,
+              border: `1px solid ${isOverdue ? 'rgba(239,68,68,0.28)' : T.border2}`,
+            }}>
+              <Clock size={9.5} />
+              {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </div>
           )}
         </div>

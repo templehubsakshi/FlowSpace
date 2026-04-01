@@ -6,7 +6,7 @@ const initialState = {
   overdueTasks: 0,
   tasksByStatus: {
     todo: 0,
-    in_progress: 0,
+    'in-progress': 0,
     done: 0
   },
   tasksByPriority: {
@@ -28,7 +28,7 @@ const statisticsSlice = createSlice({
       // Flatten all tasks
       const allTasks = [
         ...tasks.todo,
-        ...tasks.in_progress,
+        ...tasks['in-progress'],
         ...tasks.done
       ];
 
@@ -38,7 +38,7 @@ const statisticsSlice = createSlice({
       // Tasks by status
       state.tasksByStatus = {
         todo: tasks.todo.length,
-        in_progress: tasks.in_progress.length,
+        'in-progress': tasks['in-progress'].length,
         done: tasks.done.length
       };
 

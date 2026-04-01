@@ -154,12 +154,12 @@ export default function StatisticsPanel() {
 
   useEffect(() => { dispatch(calculateStatistics(tasks)); }, [tasks, dispatch]);
 
-  const allTasks = useMemo(() => [...(tasks.todo||[]), ...(tasks.in_progress||[]), ...(tasks.done||[])], [tasks]);
+  const allTasks = useMemo(() => [...(tasks.todo||[]), ...(tasks['in-progress']||[]), ...(tasks.done||[])], [tasks]);
   const weeklyData = useMemo(() => buildWeeklyData(allTasks), [allTasks]);
 
   const statusData = useMemo(() => [
     { name: "To Do",       value: statistics.tasksByStatus.todo,        color: T.muted   },
-    { name: "In Progress", value: statistics.tasksByStatus.in_progress, color: T.indigo2 },
+    { name: "In Progress", value: statistics.tasksByStatus['in-progress'], color: T.indigo2 },
     { name: "Done",        value: statistics.tasksByStatus.done,        color: T.green   },
   ].filter(d => d.value > 0), [statistics, T]);
 
@@ -172,7 +172,7 @@ export default function StatisticsPanel() {
 
   const topAssignee    = useMemo(() => statistics.tasksByAssignee?.length ? [...statistics.tasksByAssignee].sort((a, b) => b.completed - a.completed)[0] : null, [statistics]);
   const busiestPriority = useMemo(() => { const e = Object.entries(statistics.tasksByPriority||{}).sort((a,b)=>b[1]-a[1])[0]; return e&&e[1]>0 ? { name: e[0].charAt(0).toUpperCase()+e[0].slice(1), count: e[1] } : null; }, [statistics]);
-  const pendingCount   = statistics.tasksByStatus.todo + statistics.tasksByStatus.in_progress;
+  const pendingCount   = statistics.tasksByStatus.todo + statistics.tasksByStatus['in-progress'];
   const velocity       = useMemo(() => Math.round(weeklyData.reduce((s,d)=>s+d.completed,0)/7*10)/10, [weeklyData]);
 
   if (statistics.totalTasks === 0) return <EmptyAnalytics />;
@@ -198,7 +198,7 @@ export default function StatisticsPanel() {
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fit,minmax(200px,1fr))", gap: isMobile ? 10 : 14 }}>
         <StatCard title="Total Tasks"      value={statistics.totalTasks}                  icon={<Target size={19}/>}       color="blue"                                      subtitle="Across workspace" />
         <StatCard title="Completion Rate"  value={`${statistics.completionRate}%`}         icon={<CheckCircle2 size={19}/>} color="green"                                     subtitle={`${statistics.tasksByStatus.done} tasks done`} />
-        <StatCard title="In Progress"      value={statistics.tasksByStatus.in_progress}    icon={<Clock size={19}/>}        color="orange"                                    subtitle="Active tasks" />
+        <StatCard title="In Progress"      value={statistics.tasksByStatus['in-progress']}    icon={<Clock size={19}/>}        color="orange"                                    subtitle="Active tasks" />
         <StatCard title="Overdue"          value={statistics.overdueTasks}                 icon={<AlertTriangle size={19}/>}color={statistics.overdueTasks>0?"red":"purple"}   subtitle={statistics.overdueTasks>0?"Needs attention":"All on track"} />
       </div>
 
@@ -249,7 +249,7 @@ export default function StatisticsPanel() {
             <div style={{ height:"100%", width:`${statistics.completionRate}%`, borderRadius:999, background:"linear-gradient(90deg,#10b981,#34d399)", boxShadow:"0 0 14px rgba(16,185,129,0.35)", transition:"width 0.8s ease" }} />
           </div>
           <ProgressRow label="To Do"       count={statistics.tasksByStatus.todo}        total={statistics.totalTasks} color={T.muted}   />
-          <ProgressRow label="In Progress" count={statistics.tasksByStatus.in_progress} total={statistics.totalTasks} color={T.indigo2} />
+          <ProgressRow label="In Progress" count={statistics.tasksByStatus['in-progress']} total={statistics.totalTasks} color={T.indigo2} />
           <ProgressRow label="Done"        count={statistics.tasksByStatus.done}        total={statistics.totalTasks} color={T.green}   />
         </div>
 

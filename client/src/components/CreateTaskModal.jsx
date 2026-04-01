@@ -18,7 +18,7 @@ const PRIORITIES = [
 
 const STATUSES = [
   { value: "todo",        label: "To Do",       color: "#94a3b8", bg: "rgba(148,163,184,0.12)", border: "rgba(148,163,184,0.28)", glow: "rgba(148,163,184,0.14)" },
-  { value: "in_progress", label: "In Progress", color: "#fbbf24", bg: "rgba(245,158,11,0.13)",  border: "rgba(245,158,11,0.28)",  glow: "rgba(245,158,11,0.16)"  },
+  { value: "in-progress", label: "In Progress", color: "#fbbf24", bg: "rgba(245,158,11,0.13)",  border: "rgba(245,158,11,0.28)",  glow: "rgba(245,158,11,0.16)"  },
   { value: "done",        label: "Done",        color: "#34d399", bg: "rgba(16,185,129,0.13)",  border: "rgba(16,185,129,0.28)",  glow: "rgba(16,185,129,0.16)"  },
 ];
 

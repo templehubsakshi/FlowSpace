@@ -28,7 +28,7 @@ function flattenTasks(tasksState) {
   if (raw && typeof raw === "object") {
     return [
       ...(Array.isArray(raw.todo) ? raw.todo : []),
-      ...(Array.isArray(raw.in_progress) ? raw.in_progress : []),
+      ...(Array.isArray(raw["in-progress"]) ? raw["in-progress"] : []),
       ...(Array.isArray(raw.done) ? raw.done : []),
     ];
   }
@@ -335,7 +335,7 @@ function SelectedTaskPreview({ task, onClose }) {
           {task.priority}
         </span>
         <span style={{ padding: "3px 10px", borderRadius: 20, background: "var(--surface-hover)", color: "var(--text-secondary)", fontSize: 11, fontWeight: 700 }}>
-          {task.status?.replace("_", " ")}
+          {task.status?.replace("-", " ")}
         </span>
         {isOverdue && (
           <span style={{ padding: "3px 10px", borderRadius: 20, background: "rgba(239,68,68,0.1)", color: "#f87171", fontSize: 11, fontWeight: 700 }}>

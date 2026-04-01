@@ -37,13 +37,14 @@ export default function ActivityFeed() {
   const { tasks } = useSelector(s => s.tasks);
 
   const activities = useMemo(() => {
-    const all = [...(tasks?.todo||[]), ...(tasks?.in_progress||[]), ...(tasks?.done||[])];
+    const all = [...(tasks?.todo||[]), ...(tasks?.["in-progress"]||[]), ...(tasks?.done||[])];
     return [...all]
       .sort((a,b) => new Date(b.updatedAt||b.createdAt) - new Date(a.updatedAt||a.createdAt))
       .slice(0,10)
       .map(task => ({
         id: task._id,
-        type: (!task.updatedAt||task.updatedAt===task.createdAt) ? 'created' : 'updated',
+        type: (!task.updatedAt||task.updatedAt===task.createdAt)  ? 'updated'
+  : 'created',
         task: task.title,
         user: task.creator?.name || 'Unknown',
         timestamp: task.updatedAt || task.createdAt,

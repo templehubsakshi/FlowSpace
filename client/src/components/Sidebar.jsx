@@ -45,8 +45,15 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
 
   return (
     <>
-      {/* ════════ SIDEBAR ════════ */}
+      {/* FIX: .fs-sidebar CSS class handles mobile slide-in/out */}
+      <style>{`
+        @media (max-width: 900px) {
+          .fs-sidebar { transform: translateX(-100%) !important; }
+          .fs-sidebar.open { transform: translateX(0) !important; }
+        }
+      `}</style>
       <aside
+        className={`fs-sidebar${mobileOpen ? ' open' : ''}`}
         style={{
           width: 220, minWidth: 220, height: '100vh',
           background: 'var(--surface)',
@@ -55,7 +62,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
           overflow: 'hidden',
           position: 'fixed', top: 0, left: 0, zIndex: 50,
           fontFamily: "'Inter', sans-serif",
-          transform: mobileOpen ? 'translateX(0)' : undefined,
           transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
         }}
       >

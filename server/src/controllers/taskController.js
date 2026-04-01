@@ -84,11 +84,9 @@ exports.getWorkspaceTasks = async (req, res) => {
       .populate('comments.user', 'name email')
       .sort({ order: 1, createdAt: -1 });
 
-    // FIX: was 'in_progress' (underscore) — never matched DB status 'in-progress' (hyphen)
-    // This caused all in-progress tasks to silently disappear from the kanban board
     const groupedTasks = {
       todo:        tasks.filter(t => t.status === 'todo'),
-      in_progress: tasks.filter(t => t.status === 'in-progress'),
+      'in-progress': tasks.filter(t => t.status === 'in-progress'),
       done:        tasks.filter(t => t.status === 'done')
     };
 
