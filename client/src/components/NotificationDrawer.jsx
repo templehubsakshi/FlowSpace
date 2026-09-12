@@ -110,7 +110,18 @@ const NotificationItem = ({ notification, onRead, onDelete }) => {
         <Trash2 style={{ width: 12, height: 12 }} />
       </button>
 
-      <style>{`.group:hover .notification-delete-btn { opacity: 1 !important; }`}</style>
+      <style>{`
+        .group:hover .notification-delete-btn { opacity: 1 !important; }
+        /* FIX: the delete button was only ever revealed via CSS :hover, which
+           never fires on touch devices — it was effectively permanently
+           invisible (and untappable, since opacity:0 elements still occupy
+           space but read as "not meant to be interacted with") on mobile.
+           (hover: none) targets touch/coarse-pointer devices specifically, so
+           desktop hover behavior is untouched. */
+        @media (hover: none) {
+          .notification-delete-btn { opacity: 1 !important; width: 34px !important; height: 34px !important; }
+        }
+      `}</style>
     </div>
   );
 };
@@ -133,11 +144,20 @@ const NotificationDrawer = ({ isOpen, onClose }) => {
         onClick={onClose}
       />
 
+      {/* FIX: height was inline `100%`, which — for a fixed-position element —
+          resolves against the same "initial containing block" that causes the
+          classic 100vh mobile bug (doesn't shrink for the address bar), so the
+          bottom of the drawer could render below the visible viewport. 100dvh
+          (with a vh fallback) tracks the real visible viewport. Declared here
+          as a class instead of inline so we can layer the vh fallback under
+          the dvh value — inline styles can't express a fallback. */}
+      <style>{`.notif-drawer-panel { height: 100vh; height: 100dvh; }`}</style>
+
       {/* Drawer */}
       <div
-        className="animate-slideInRight"
+        className="animate-slideInRight notif-drawer-panel"
         style={{
-          position: 'fixed', top: 0, right: 0, height: '100%',
+          position: 'fixed', top: 0, right: 0,
           width: 'min(380px, 100vw)', maxWidth: '100vw', zIndex: 50,
           display: 'flex', flexDirection: 'column',
           background: 'var(--surface-overlay)',

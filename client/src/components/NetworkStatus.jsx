@@ -32,7 +32,16 @@ export default function NetworkStatus() {
 
   return (
     <div style={{
-      position: 'fixed', bottom: 20, right: 20, zIndex: 9999,
+      position: 'fixed',
+      // FIX: fixed bottom/right offsets alone can sit under the home-indicator
+      // gesture bar / rounded-corner safe area on notched phones; env()
+      // resolves to 0 on devices without a cutout, so this is safe everywhere.
+      bottom: 'calc(20px + env(safe-area-inset-bottom))',
+      right: 'calc(20px + env(safe-area-inset-right))',
+      // FIX: no width clamp previously — on a very narrow (e.g. 280px) screen
+      // the message + icon + padding could overflow past the left edge.
+      maxWidth: 'calc(100vw - 40px)',
+      zIndex: 9999,
       display: 'flex', alignItems: 'center', gap: 10,
       padding: '10px 16px',
       borderRadius: 'var(--radius-md)',

@@ -226,7 +226,7 @@ export default function TaskDetailModal({ task, onClose, onAddComment, workspace
                         placeholder="Write a comment… (type @ to mention)"
                         className="tdm-comment-input"
                         style={{ width:"100%", height:46, borderRadius:14, border:`1.5px solid ${T.border2}`, background:T.s2, color:T.text, padding:"0 14px", fontSize:13.5, outline:"none", transition:"border-color 0.15s,box-shadow 0.15s", boxSizing:"border-box" }} />
-                      {showMentionDropdown && <MentionDropdown query={mentionQuery} members={workspaceMembers} onSelect={handleMentionSelect} onClose={() => setShowMentionDropdown(false)} />}
+                      {showMentionDropdown && <MentionDropdown query={mentionQuery} members={workspaceMembers} onSelect={handleMentionSelect} onClose={() => setShowMentionDropdown(false)} anchorRef={inputRef} />}
                     </div>
                     <button onClick={handleSubmit} disabled={!comment.trim()||submitting} className="tdm-send"
                       style={{ height:46, padding:"0 20px", borderRadius:14, border:"none", flexShrink:0, background:comment.trim()?"#6366f1":T.s2, color:comment.trim()?"white":T.muted, cursor:comment.trim()?"pointer":"not-allowed", display:"flex", alignItems:"center", gap:8, fontSize:13, fontWeight:700, transition:"all 0.18s ease", boxShadow:comment.trim()?"0 4px 14px rgba(99,102,241,0.28)":"none" }}>

@@ -76,6 +76,18 @@ function TaskCard({ task, onClick, onDelete, workspaceId }) {
         border: `1px solid ${hovered ? p.border : T.border}`,
         borderRadius: 12, padding: '13px 14px 11px', cursor: 'pointer',
         position: 'relative', overflow: 'hidden',
+        // FIX (mobile drag-and-drop): without this, touch browsers treat a
+        // finger-down-and-move on the card as a page/column scroll gesture
+        // before dnd-kit's own pointer listeners get a chance to recognize a
+        // drag, since dnd-kit calls preventDefault() only *after* its
+        // activation constraint is met — by which point native scrolling has
+        // already taken over. `touch-action: none` tells the browser not to
+        // handle panning/zooming gestures that start on this element at all,
+        // handing that decision fully to dnd-kit's PointerSensor instead.
+        // Tradeoff: a column can no longer be scrolled by touching directly on
+        // a card — only via the gaps between cards or the column background.
+        // This matches the standard dnd-kit guidance for touch drag targets.
+        touchAction: 'none',
         boxShadow: hovered
           ? `0 0 0 1px ${p.border}, 0 10px 36px rgba(0,0,0,0.15), 0 0 20px ${p.glow}`
           : `0 2px 8px rgba(0,0,0,0.06)`,
@@ -84,7 +96,7 @@ function TaskCard({ task, onClick, onDelete, workspaceId }) {
       {/* Action buttons — Eye always visible on hover, Delete only if canDelete */}
       <div style={{
         position: 'absolute', top: 9, right: 9, zIndex: 10,
-        display: 'flex', alignItems: 'center', gap: 4,
+        display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 4,
         opacity: showAct ? 1 : 0,
         transform: showAct ? 'translateY(0)' : 'translateY(-4px)',
         transition: 'opacity 0.15s, transform 0.15s',
@@ -94,7 +106,11 @@ function TaskCard({ task, onClick, onDelete, workspaceId }) {
         <button
           onClick={e => { e.stopPropagation(); onClick(); }}
           style={{
-            width: 25, height: 25, borderRadius: 7, border: 'none',
+            // FIX: 25px is below the ~44px recommended touch target size.
+            // Since these buttons are shown permanently (not just on hover)
+            // on mobile, bump the hit area there without changing the
+            // desktop hover-triggered size.
+            width: isMobile ? 34 : 25, height: isMobile ? 34 : 25, borderRadius: 7, border: 'none',
             cursor: 'pointer', background: 'rgba(99,102,241,0.9)',
             color: 'white', display: 'grid', placeItems: 'center',
             boxShadow: '0 2px 8px rgba(99,102,241,0.5)', transition: 'transform 0.1s',
@@ -110,7 +126,7 @@ function TaskCard({ task, onClick, onDelete, workspaceId }) {
           <button
             onClick={handleDelete}
             style={{
-              width: 25, height: 25, borderRadius: 7, border: 'none',
+              width: isMobile ? 34 : 25, height: isMobile ? 34 : 25, borderRadius: 7, border: 'none',
               cursor: 'pointer', background: 'rgba(239,68,68,0.9)',
               color: 'white', display: 'grid', placeItems: 'center',
               boxShadow: '0 2px 8px rgba(239,68,68,0.45)', transition: 'transform 0.1s',
@@ -148,7 +164,8 @@ function TaskCard({ task, onClick, onDelete, workspaceId }) {
           fontWeight: 600, fontSize: 13.5, lineHeight: 1.4,
           letterSpacing: '-0.025em', color: T.text,
           marginBottom: task.description ? 5 : 0,
-          paddingRight: showAct ? 72 : 0,
+          // Reserve extra room on mobile since the action buttons are bigger there (touch targets).
+          paddingRight: showAct ? (isMobile ? 92 : 72) : 0,
           overflow: 'hidden', display: '-webkit-box',
           WebkitBoxOrient: 'vertical', WebkitLineClamp: 2,
           fontFamily: "'Inter', sans-serif",

@@ -51,11 +51,18 @@ export default function Sidebar({ mobileOpen = false, onMobileClose = () => {} }
           .fs-sidebar { transform: translateX(-100%) !important; }
           .fs-sidebar.open { transform: translateX(0) !important; }
         }
+        /* FIX: 100vh (set inline below as a fallback for older browsers)
+           doesn't account for mobile browser chrome (address bar / bottom
+           bar) showing or hiding, so this fixed sidebar could end up taller
+           than the visible viewport — cutting off the footer (theme toggle /
+           profile row) with no way to scroll to it. 100dvh tracks the actual
+           visible viewport and is layered on top of the vh fallback. */
+        .fs-sidebar { height: 100vh; height: 100dvh; }
       `}</style>
       <aside
         className={`fs-sidebar${mobileOpen ? ' open' : ''}`}
         style={{
-          width: 220, minWidth: 220, height: '100vh',
+          width: 220, minWidth: 220,
           background: 'var(--surface)',
           borderRight: '1px solid var(--border)',
           display: 'flex', flexDirection: 'column',

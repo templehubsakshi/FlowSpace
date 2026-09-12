@@ -99,16 +99,28 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Inter', sans-serif", fontSize: 13.5, lineHeight: 1.5, letterSpacing: '-0.015em', WebkitFontSmoothing: 'antialiased' }}>
+    <div className="dash-root" style={{ display: 'flex', overflow: 'hidden', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Inter', sans-serif", fontSize: 13.5, lineHeight: 1.5, letterSpacing: '-0.015em', WebkitFontSmoothing: 'antialiased' }}>
       <style>{`
         @keyframes badgePop { from { transform:scale(0); } to { transform:scale(1); } }
         @keyframes tabSlide { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
         .dash-tab-content { animation: tabSlide 0.18s ease both; }
 
+        /* FIX: 100vh doesn't track the visible viewport on mobile browsers
+           while the address bar is shown/hidden, which could clip the bottom
+           of the board/header. 100dvh (with a vh fallback for older
+           browsers) tracks the real visible viewport. */
+        .dash-root { height: 100vh; height: 100dvh; }
+
         /* ── Mobile hamburger ── */
         .mob-menu-btn {
           display: none;
-          position: fixed; top: 12px; left: 12px; z-index: 70;
+          position: fixed;
+          /* FIX: plain 12px could sit under a device notch/status-bar cutout
+             in landscape on notched phones. env(safe-area-inset-*) is 0 on
+             devices without a cutout, so this is a no-op fallback there. */
+          top: calc(12px + env(safe-area-inset-top));
+          left: calc(12px + env(safe-area-inset-left));
+          z-index: 70;
           width: 36px; height: 36px; border-radius: 10px;
           background: var(--brand-primary); border: none;
           cursor: pointer; color: white;

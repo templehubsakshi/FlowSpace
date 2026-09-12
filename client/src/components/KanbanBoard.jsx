@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useCallback, lazy, Suspense } from 'react
 import { useDispatch, useSelector } from 'react-redux';
 import {
   DndContext, DragOverlay, closestCorners,
-  PointerSensor, KeyboardSensor, TouchSensor,
+  PointerSensor, KeyboardSensor,
   useSensor, useSensors,
 } from '@dnd-kit/core';
 import {
@@ -117,10 +117,19 @@ export default function KanbanBoard({
     [currentWorkspace?.members]
   );
 
+  // FIX (mobile drag-and-drop): previously both PointerSensor and TouchSensor
+  // were registered together. PointerSensor already receives touch input via
+  // the browser's unified Pointer Events API, so adding TouchSensor alongside
+  // it makes two sensors race to claim the same touch interaction. On mobile
+  // this race — combined with the card not opting out of native touch
+  // scrolling (see the `touchAction: 'none'` fix in TaskCard.jsx) — is what
+  // let the browser's own scroll gesture win, so drags silently turned into
+  // scrolls. Using a single PointerSensor (dnd-kit's own recommendation for
+  // combined mouse/touch/pen support) removes the race entirely. Desktop
+  // mouse dragging is unaffected since PointerSensor already handled it.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
+    useSensor(KeyboardSensor)
   );
 
   useEffect(() => {
