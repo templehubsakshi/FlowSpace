@@ -123,10 +123,20 @@ export default function CreateTaskModal({ initialStatus = "todo", initialDueDate
         .ctm-input:focus { border-color:rgba(99,102,241,0.45)!important; box-shadow:0 0 0 4px rgba(99,102,241,0.10)!important; }
         .ctm-scroll::-webkit-scrollbar{width:3px} .ctm-scroll::-webkit-scrollbar-track{background:transparent} .ctm-scroll::-webkit-scrollbar-thumb{background:${T.border2};border-radius:99px}
         select option { background:${T.s2}; color:${T.text}; }
+        .ctm-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        @media (max-width: 520px) {
+          .ctm-grid-2 { grid-template-columns: 1fr; gap:14px; }
+        }
+        @media (max-width: 480px) {
+          .ctm-backdrop-pad { padding: 14px 10px !important; }
+          .ctm-header { padding: 20px 18px 16px !important; }
+          .ctm-body { padding: 18px 18px !important; }
+          .ctm-footer { padding: 14px 18px 18px !important; }
+        }
       `}</style>
 
       {/* Backdrop */}
-      <div onClick={!isLoading ? onClose : undefined}
+      <div onClick={!isLoading ? onClose : undefined} className="ctm-backdrop-pad"
         style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.55)", backdropFilter:"blur(12px)", WebkitBackdropFilter:"blur(12px)", display:"flex", alignItems:"center", justifyContent:"center", padding:"24px 16px", animation:"ctm-backdrop 0.22s ease both" }}>
 
         {/* Modal */}
@@ -137,7 +147,7 @@ export default function CreateTaskModal({ initialStatus = "todo", initialDueDate
           <div style={{ position:"absolute", top:0, left:"8%", right:"8%", height:1, background:"linear-gradient(90deg,transparent,rgba(99,102,241,0.55),rgba(139,92,246,0.4),transparent)", zIndex:3 }} />
 
           {/* Header */}
-          <div style={{ padding:"28px 28px 22px", borderBottom:`1px solid ${T.border}`, display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16 }}>
+          <div className="ctm-header" style={{ padding:"28px 28px 22px", borderBottom:`1px solid ${T.border}`, display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16 }}>
             <div style={{ display:"flex", alignItems:"center", gap:15 }}>
               <div style={{ width:46, height:46, borderRadius:15, background:"linear-gradient(135deg,rgba(99,102,241,0.25),rgba(139,92,246,0.18))", border:"1px solid rgba(99,102,241,0.30)", display:"grid", placeItems:"center", boxShadow:"0 12px 30px rgba(99,102,241,0.20)", flexShrink:0 }}>
                 <Plus size={19} color="#818cf8" strokeWidth={2.5} />
@@ -161,7 +171,7 @@ export default function CreateTaskModal({ initialStatus = "todo", initialDueDate
 
           {/* Form body */}
           <form onSubmit={handleSubmit}>
-            <div className="ctm-scroll" style={{ padding:"24px 28px", display:"flex", flexDirection:"column", gap:12, maxHeight:"calc(100vh - 250px)", overflowY:"auto" }}>
+            <div className="ctm-scroll ctm-body" style={{ padding:"24px 28px", display:"flex", flexDirection:"column", gap:12, maxHeight:"calc(100vh - 250px)", overflowY:"auto" }}>
 
               {/* Basic Info */}
               <div style={{ background:cardBg, border:`1px solid ${cardBorder}`, borderRadius:16, padding:"16px 18px", display:"flex", flexDirection:"column", gap:14 }}>
@@ -190,7 +200,7 @@ export default function CreateTaskModal({ initialStatus = "todo", initialDueDate
 
               {/* Assignee + Due Date */}
               <div style={{ background:cardBg, border:`1px solid ${cardBorder}`, borderRadius:16, padding:"16px 18px" }}>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+                <div className="ctm-grid-2">
                   <div>
                     <SectionLabel icon={User} T={T}>Assignee</SectionLabel>
                     <div style={{ position:"relative" }}>
@@ -242,7 +252,7 @@ export default function CreateTaskModal({ initialStatus = "todo", initialDueDate
             </div>
 
             {/* Footer */}
-            <div style={{ padding:"16px 28px 24px", borderTop:`1px solid ${T.border}`, display:"flex", gap:10 }}>
+            <div className="ctm-footer" style={{ padding:"16px 28px 24px", borderTop:`1px solid ${T.border}`, display:"flex", gap:10 }}>
               <button type="button" onClick={onClose} disabled={isLoading}
                 style={{ flex:1, height:48, borderRadius:14, border:`1.5px solid ${T.border2}`, background:T.s2, color:T.text2, fontSize:13.5, fontWeight:700, fontFamily:"inherit", cursor:"pointer", transition:"all 0.18s ease" }}
                 onMouseEnter={e => { e.currentTarget.style.background=T.s3; e.currentTarget.style.color=T.text; }}

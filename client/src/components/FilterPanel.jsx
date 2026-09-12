@@ -93,7 +93,7 @@ export default function FilterPanel({ filters, onFilterChange, onClearFilters })
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 10px)', right: 0,
-          width: 340, zIndex: 9999,
+          width: 340, maxWidth: 'calc(100vw - 24px)', zIndex: 9999,
           background: T.surface,
           border: `1px solid ${T.border2}`,
           borderRadius: 18,

@@ -131,6 +131,21 @@ export default function WorkspaceSettingsModal({ onClose }) {
         .wsm-tab.active{background:rgba(99,102,241,.12);color:#818cf8}
         .wsm-tab.danger.active{background:rgba(239,68,68,.10);color:#f87171}
         .wsm-tab.danger:hover{color:#fca5a5}
+
+        /* ── Responsive ── */
+        @media (max-width: 620px) {
+          .wsm-overlay { padding-left: 10px !important; padding-right: 10px !important; }
+          .wsm-body { flex-direction: column !important; }
+          .wsm-tabs {
+            width: 100% !important; flex-direction: row !important;
+            border-right: none !important; border-bottom: 1px solid ${T.border};
+            overflow-x: auto !important; padding: 8px 10px !important; gap: 6px !important;
+          }
+          .wsm-tab { flex-shrink: 0; }
+        }
+        @media (max-width: 420px) {
+          .wsm-tab span.wsm-tab-label { display: none; }
+        }
         .wsm-color-dot{cursor:pointer;transition:transform .15s,box-shadow .15s,outline .15s;border-radius:50%;border:none}
         .wsm-color-dot:hover{transform:scale(1.18)}
         .wsm-color-dot.active{outline:2px solid rgba(255,255,255,.7);outline-offset:2px;transform:scale(1.15)}
@@ -180,13 +195,13 @@ export default function WorkspaceSettingsModal({ onClose }) {
             </div>
 
             {/* Body */}
-            <div style={{ display:'flex',flex:1,overflow:'hidden',minHeight:0 }}>
+            <div className="wsm-body" style={{ display:'flex',flex:1,overflow:'hidden',minHeight:0 }}>
 
               {/* Tabs sidebar */}
-              <div style={{ width:150,flexShrink:0,borderRight:`1px solid ${T.border}`,padding:'14px 10px',display:'flex',flexDirection:'column',gap:3 }}>
+              <div className="wsm-tabs" style={{ width:150,flexShrink:0,borderRight:`1px solid ${T.border}`,padding:'14px 10px',display:'flex',flexDirection:'column',gap:3 }}>
                 {TABS.map(({ key, label, icon: IconComp }) => (
                   <button key={key} onClick={() => setActiveTab(key)} className={`wsm-tab${key==='danger'?' danger':''}${activeTab===key?' active':''}`}>
-                    <IconComp size={13} strokeWidth={2} />{label}
+                    <IconComp size={13} strokeWidth={2} /><span className="wsm-tab-label">{label}</span>
                   </button>
                 ))}
               </div>

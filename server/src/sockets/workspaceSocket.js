@@ -179,7 +179,24 @@
 const Task      = require('../models/Task');
 const Workspace = require('../models/Workspace');
 
+// FIX: this used to be Map<userId, socketId> — a single string. Opening a
+// second tab/device just overwrote the first tab's socket id, so
+// notifications silently stopped reaching whichever tab wasn't "last in".
+// Now it's Map<userId, Set<socketId>> so every open connection for a user
+// is tracked and can receive events.
 const onlineUsers = new Map();
+
+function addOnlineSocket(userId, socketId) {
+  if (!onlineUsers.has(userId)) onlineUsers.set(userId, new Set());
+  onlineUsers.get(userId).add(socketId);
+}
+
+function removeOnlineSocket(userId, socketId) {
+  const sockets = onlineUsers.get(userId);
+  if (!sockets) return;
+  sockets.delete(socketId);
+  if (sockets.size === 0) onlineUsers.delete(userId);
+}
 
 // ── Helper: verify user is a member of the workspace ────────────────────────
 async function verifyMembership(userId, workspaceId) {
@@ -189,7 +206,7 @@ async function verifyMembership(userId, workspaceId) {
 }
 
 const handleWorkspaceSocket = (io, socket) => {
-  onlineUsers.set(socket.userId, socket.id);
+  addOnlineSocket(socket.userId, socket.id);
 
   // ── JOIN WORKSPACE ──────────────────────────────────────────────────────────
   // ✅ FIX: Validate membership before allowing room join
@@ -387,16 +404,23 @@ const handleWorkspaceSocket = (io, socket) => {
   });
 
   // ── DISCONNECT ──────────────────────────────────────────────────────────────
+  // FIX: only announce user:left once this was the user's *last* open
+  // socket. Otherwise closing one tab would tell everyone the user left,
+  // even while they're still connected in another tab.
   socket.on('disconnect', () => {
-    onlineUsers.delete(socket.userId);
-    Array.from(socket.rooms).forEach(room => {
-      if (room !== socket.id && room.startsWith('workspace:')) {
-        socket.to(room).emit('user:left', {
-          userId:   socket.userId,
-          userName: socket.user.name,
-        });
-      }
-    });
+    removeOnlineSocket(socket.userId, socket.id);
+    const stillOnline = onlineUsers.has(socket.userId);
+
+    if (!stillOnline) {
+      Array.from(socket.rooms).forEach(room => {
+        if (room !== socket.id && room.startsWith('workspace:')) {
+          socket.to(room).emit('user:left', {
+            userId:   socket.userId,
+            userName: socket.user.name,
+          });
+        }
+      });
+    }
   });
 };
 

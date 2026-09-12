@@ -101,17 +101,29 @@ export default function TaskDetailModal({ task, onClose, onAddComment, workspace
         .tdm-close:hover { background:${T.s3}!important; color:${T.text}!important; }
         .tdm-send:not(:disabled):hover { filter:brightness(1.12); transform:translateY(-1px); box-shadow:0 6px 20px rgba(99,102,241,0.35)!important; }
         .tdm-comment-input:focus { border-color:rgba(99,102,241,0.5)!important; box-shadow:0 0 0 3px rgba(99,102,241,0.10)!important; }
+        .tdm-top-grid { display:grid; grid-template-columns:1.15fr 0.85fr; gap:20px; }
+        @media (max-width: 760px) {
+          .tdm-top-grid { grid-template-columns: 1fr; gap:18px; }
+        }
+        @media (max-width: 480px) {
+          .tdm-backdrop-pad { padding: 16px 10px !important; }
+          .tdm-header { padding: 18px 18px 16px !important; }
+          .tdm-body { padding: 18px 18px 20px !important; }
+          .tdm-meta-grid { grid-template-columns: 1fr !important; }
+          .tdm-comment-row { flex-direction: column !important; align-items: stretch !important; }
+          .tdm-comment-row button { width: 100%; justify-content: center; }
+        }
       `}</style>
 
       {/* Backdrop */}
-      <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.50)", backdropFilter:"blur(12px)", WebkitBackdropFilter:"blur(12px)", display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"40px 20px", overflowY:"auto" }}>
+      <div onClick={onClose} className="tdm-backdrop-pad" style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.50)", backdropFilter:"blur(12px)", WebkitBackdropFilter:"blur(12px)", display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"40px 20px", overflowY:"auto" }}>
 
         {/* Modal */}
         <div onClick={e => e.stopPropagation()}
           style={{ width:"100%", maxWidth:940, background:T.surface, border:`1px solid ${T.border2}`, borderRadius:24, boxShadow:"0 40px 100px rgba(0,0,0,0.20), 0 0 0 1px rgba(255,255,255,0.04) inset", overflow:"hidden", animation:"tdm-in 0.22s cubic-bezier(0.22,1,0.36,1) both" }}>
 
           {/* Header */}
-          <div style={{ padding:"22px 24px 20px", borderBottom:`1px solid ${T.border}`, display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16, background:T.s2 }}>
+          <div className="tdm-header" style={{ padding:"22px 24px 20px", borderBottom:`1px solid ${T.border}`, display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16, background:T.s2 }}>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
                 <span style={{ width:8, height:8, borderRadius:"50%", background:priority.color, boxShadow:`0 0 0 3px ${priority.bg}`, flexShrink:0 }} />
@@ -131,10 +143,10 @@ export default function TaskDetailModal({ task, onClose, onAddComment, workspace
           </div>
 
           {/* Body */}
-          <div style={{ padding:"22px 24px 24px", display:"flex", flexDirection:"column", gap:22 }}>
+          <div className="tdm-body" style={{ padding:"22px 24px 24px", display:"flex", flexDirection:"column", gap:22 }}>
 
             {/* Top grid */}
-            <div style={{ display:"grid", gridTemplateColumns:"1.15fr 0.85fr", gap:20 }}>
+            <div className="tdm-top-grid">
               {/* Left */}
               <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
                 <div>
@@ -161,7 +173,7 @@ export default function TaskDetailModal({ task, onClose, onAddComment, workspace
               {/* Right — meta */}
               <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                 <p style={{ fontSize:10.5, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.09em", color:T.muted, marginBottom:0 }}>Details</p>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                <div className="tdm-meta-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                   <MetaCard icon={Flag}     label="Priority"    value={priority.label}    color={priority.color}    bg={priority.bg}     border={priority.border} />
                   <MetaCard icon={Tag}      label="Status"      value={statusStyle.label} color={statusStyle.color} bg={statusStyle.bg}   border={statusStyle.border} />
                   <MetaCard icon={User}     label="Assigned To" value={task.assignedTo?.name||task.assignee?.name||"Unassigned"} color={task.assignee||task.assignedTo?T.text:T.muted} />
@@ -208,7 +220,7 @@ export default function TaskDetailModal({ task, onClose, onAddComment, workspace
               {/* Add comment */}
               {onAddComment && (
                 <div style={{ position:"relative" }}>
-                  <div style={{ display:"flex", gap:10, alignItems:"flex-end" }}>
+                  <div className="tdm-comment-row" style={{ display:"flex", gap:10, alignItems:"flex-end" }}>
                     <div style={{ flex:1, position:"relative" }}>
                       <input ref={inputRef} type="text" value={comment} onChange={handleCommentChange} onKeyDown={handleKeyDown}
                         placeholder="Write a comment… (type @ to mention)"

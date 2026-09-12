@@ -218,6 +218,10 @@ export default function InviteMemberModal({ onClose }) {
           to   { opacity:1; transform:translateY(0); }
         }
         .fsm-success-text { animation:fadeSlideIn .3s .25s ease both; }
+        .fsm-role-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        @media (max-width: 360px) {
+          .fsm-role-grid { grid-template-columns: 1fr; }
+        }
       `}</style>
 
       <div
@@ -382,7 +386,7 @@ export default function InviteMemberModal({ onClose }) {
                   <label style={{display:'block',fontSize:11,fontWeight:600,color:'#475569',textTransform:'uppercase',letterSpacing:'.6px',marginBottom:9}}>
                     Role
                   </label>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                  <div className="fsm-role-grid">
                     {[
                       { key:'member', icon:<Eye style={{width:14,height:14}}/>,    label:'Member', desc:'Can view and edit tasks',        accent:'#818cf8' },
                       { key:'admin',  icon:<Shield style={{width:14,height:14}}/>, label:'Admin',  desc:'Can manage members & settings', accent:'#a78bfa' },

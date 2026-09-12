@@ -139,7 +139,7 @@ function UpcomingPanel({ tasks, onTaskClick, asDrawer, onClose }) {
       })}
     </>
   );
-  if(asDrawer){return(<><div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',backdropFilter:'blur(4px)',zIndex:59}}/><div style={{position:'fixed',right:0,top:0,bottom:0,width:280,zIndex:60,background:'var(--surface-base)',borderLeft:'1.5px solid var(--border-subtle)',boxShadow:'var(--shadow-xl)',padding:'16px 14px',display:'flex',flexDirection:'column',gap:10,overflowY:'auto',animation:'slideInRight 0.22s ease-out'}}>{content}</div><style>{`@keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style></>);}
+  if(asDrawer){return(<><div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',backdropFilter:'blur(4px)',zIndex:59}}/><div style={{position:'fixed',right:0,top:0,bottom:0,width:'min(280px, 100vw)',maxWidth:'100vw',zIndex:60,background:'var(--surface-base)',borderLeft:'1.5px solid var(--border-subtle)',boxShadow:'var(--shadow-xl)',padding:'16px 14px',display:'flex',flexDirection:'column',gap:10,overflowY:'auto',animation:'slideInRight 0.22s ease-out'}}>{content}</div><style>{`@keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style></>);}
   return <div style={panelStyle}>{content}</div>;
 }
 

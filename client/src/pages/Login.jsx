@@ -96,6 +96,18 @@ const STYLES = `
     -webkit-text-fill-color:#e2e8f0 !important; caret-color:#818cf8;
   }
   *,*::before,*::after { box-sizing:border-box; }
+
+  /* ══ RESPONSIVE ══ */
+  @media (max-width: 980px) {
+    .auth-left-panel { display: none !important; }
+    .auth-right-panel { width: 100% !important; border-left: none !important; }
+  }
+  @media (max-width: 480px) {
+    .auth-right-panel { padding: 28px 18px !important; }
+  }
+  @media (max-width: 360px) {
+    .auth-right-panel { padding: 22px 12px !important; }
+  }
 `;
 
 export default function Login() {

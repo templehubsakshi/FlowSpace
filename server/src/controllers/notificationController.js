@@ -64,15 +64,15 @@ exports.createNotification = async ({
       workspace: notification.workspace,
     };
 
-    // Emit if recipient is online
+    // Emit to every open socket the recipient has (multi-tab/multi-device)
     try {
       const io = getIO();
       const onlineUsers = getOnlineUsers();
-      const recipientSocketId = onlineUsers.get(recipient.toString());
-      
-      if (recipientSocketId) {
-        io.to(recipientSocketId).emit('notification:new', payload);
-        console.log(`✅ Notification sent to user ${recipient}`);
+      const recipientSockets = onlineUsers.get(recipient.toString());
+
+      if (recipientSockets && recipientSockets.size > 0) {
+        io.to([...recipientSockets]).emit('notification:new', payload);
+        console.log(`✅ Notification sent to user ${recipient} (${recipientSockets.size} device(s))`);
       }
     } catch (socketError) {
       console.error('Socket emission error:', socketError);

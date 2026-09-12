@@ -138,7 +138,7 @@ const NotificationDrawer = ({ isOpen, onClose }) => {
         className="animate-slideInRight"
         style={{
           position: 'fixed', top: 0, right: 0, height: '100%',
-          width: 380, zIndex: 50,
+          width: 'min(380px, 100vw)', maxWidth: '100vw', zIndex: 50,
           display: 'flex', flexDirection: 'column',
           background: 'var(--surface-overlay)',
           borderLeft: '1px solid var(--border-subtle)',

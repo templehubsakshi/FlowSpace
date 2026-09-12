@@ -251,6 +251,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   height: 100%;
+  overflow-x: hidden;
   /* Light mode default — body bg */
   background: var(--bg);
   color: var(--text);
@@ -260,6 +261,7 @@ html {
 body {
   min-height: 100vh;
   height: 100%;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--text);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;

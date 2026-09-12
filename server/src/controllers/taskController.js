@@ -1,6 +1,16 @@
+const mongoose = require('mongoose');
 const Task = require('../models/Task');
-const Workspace = require('../models/Workspace');
 const { createNotification } = require('./notificationController');
+const { buildReorderOperations } = require('../utils/taskOrdering');
+
+const VALID_STATUSES = ['todo', 'in-progress', 'done'];
+
+// NOTE: membership/authorization is handled upstream by the route middleware
+// chain (loadTask -> loadWorkspace -> isMember), which attaches:
+//   req.task            (routes keyed by :taskId)
+//   req.workspace        (the workspace document)
+//   req.workspaceMember  (the caller's member record, incl. role)
+// so controllers below don't re-fetch the workspace or re-check membership.
 
 // ================= CREATE TASK =================
 exports.createTask = async (req, res) => {
@@ -10,26 +20,16 @@ exports.createTask = async (req, res) => {
       description,
       status = 'todo',
       priority = 'medium',
-      workspaceId,
       assignee,
       dueDate,
       tags
     } = req.body;
 
+    const workspaceId = req.workspace._id;
     const userId = req.userId;
 
-    if (!title || !workspaceId) {
+    if (!title) {
       return res.status(400).json({ message: 'Title and workspace are required' });
-    }
-
-    const workspace = await Workspace.findById(workspaceId);
-    if (!workspace) {
-      return res.status(404).json({ message: 'Workspace not found' });
-    }
-
-    const isMember = workspace.members.some(m => m.user.toString() === userId);
-    if (!isMember) {
-      return res.status(403).json({ message: 'Not a member of this workspace' });
     }
 
     const tasksInColumn = await Task.find({ workspace: workspaceId, status })
@@ -69,14 +69,7 @@ exports.createTask = async (req, res) => {
 // ================= GET WORKSPACE TASKS =================
 exports.getWorkspaceTasks = async (req, res) => {
   try {
-    const { workspaceId } = req.params;
-    const userId = req.userId;
-
-    const workspace = await Workspace.findById(workspaceId);
-    if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
-
-    const isMember = workspace.members.some(m => m.user.toString() === userId);
-    if (!isMember) return res.status(403).json({ message: 'Not authorized' });
+    const workspaceId = req.workspace._id;
 
     const tasks = await Task.find({ workspace: workspaceId })
       .populate('creator', 'name email')
@@ -85,9 +78,9 @@ exports.getWorkspaceTasks = async (req, res) => {
       .sort({ order: 1, createdAt: -1 });
 
     const groupedTasks = {
-      todo:        tasks.filter(t => t.status === 'todo'),
+      todo:          tasks.filter(t => t.status === 'todo'),
       'in-progress': tasks.filter(t => t.status === 'in-progress'),
-      done:        tasks.filter(t => t.status === 'done')
+      done:          tasks.filter(t => t.status === 'done')
     };
 
     res.json({ success: true, tasks: groupedTasks });
@@ -101,24 +94,13 @@ exports.getWorkspaceTasks = async (req, res) => {
 // ================= GET SINGLE TASK =================
 exports.getTask = async (req, res) => {
   try {
-    const { taskId } = req.params;
-    const userId = req.userId;
+    await req.task.populate([
+      { path: 'creator', select: 'name email' },
+      { path: 'assignee', select: 'name email' },
+      { path: 'comments.user', select: 'name email' }
+    ]);
 
-    const task = await Task.findById(taskId)
-      .populate('creator', 'name email')
-      .populate('assignee', 'name email')
-      .populate('comments.user', 'name email');
-
-    if (!task) return res.status(404).json({ message: 'Task not found' });
-
-    // FIX: added null check — workspace can be deleted after task was created
-    const workspace = await Workspace.findById(task.workspace);
-    if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
-
-    const isMember = workspace.members.some(m => m.user.toString() === userId);
-    if (!isMember) return res.status(403).json({ message: 'Not authorized' });
-
-    res.json({ success: true, task });
+    res.json({ success: true, task: req.task });
 
   } catch (error) {
     console.error('Get task error:', error);
@@ -129,19 +111,8 @@ exports.getTask = async (req, res) => {
 // ================= UPDATE TASK =================
 exports.updateTask = async (req, res) => {
   try {
-    const { taskId } = req.params;
+    const task = req.task;
     const updates = req.body;
-    const userId = req.userId;
-
-    const task = await Task.findById(taskId);
-    if (!task) return res.status(404).json({ message: 'Task not found' });
-
-    // FIX: added null check on workspace
-    const workspace = await Workspace.findById(task.workspace);
-    if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
-
-    const isMember = workspace.members.some(m => m.user.toString() === userId);
-    if (!isMember) return res.status(403).json({ message: 'Not authorized' });
 
     const allowedFields = ['title', 'description', 'status', 'priority', 'assignee', 'dueDate', 'tags'];
     allowedFields.forEach(field => {
@@ -167,28 +138,12 @@ exports.updateTask = async (req, res) => {
 // ================= DELETE TASK =================
 exports.deleteTask = async (req, res) => {
   try {
-    const { taskId } = req.params;
+    const task = req.task;
+    const member = req.workspaceMember;
     const userId = req.userId;
 
-    const task = await Task.findById(taskId);
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
-    }
-
-    // FIX: added null check on workspace
-    const workspace = await Workspace.findById(task.workspace);
-    if (!workspace) {
-      return res.status(404).json({ message: 'Workspace not found' });
-    }
-
-    const member = workspace.members.find(m => m.user.toString() === userId);
-    if (!member) {
-      return res.status(403).json({ message: 'Not a workspace member' });
-    }
-
-    // FIX: removed console.log statements that leaked userId, creator, and role to production logs
     const isCreator = task.creator?.toString() === userId;
-    const isAdmin   = ['admin', 'owner'].includes(member.role);
+    const isAdmin = ['admin', 'owner'].includes(member.role);
 
     if (!isCreator && !isAdmin) {
       return res.status(403).json({
@@ -196,7 +151,7 @@ exports.deleteTask = async (req, res) => {
       });
     }
 
-    await Task.findByIdAndDelete(taskId);
+    await Task.findByIdAndDelete(task._id);
 
     res.json({ success: true, message: 'Task deleted successfully' });
 
@@ -207,34 +162,53 @@ exports.deleteTask = async (req, res) => {
 };
 
 // ================= MOVE TASK =================
+// FIX: previously this only ever incremented order in the *destination*
+// column and never renumbered the *source* column, so dragging a task out
+// of a column left a permanent gap in that column's order sequence (and
+// cross-column moves plus concurrent drags could desync order entirely
+// since nothing here was transactional). This now:
+//   1. Validates newStatus/newOrder.
+//   2. Computes the full set of shifts needed (source column close-gap +
+//      destination column make-room, or same-column shift) via the pure,
+//      unit-tested buildReorderOperations().
+//   3. Applies the shifts + the task's own update inside a single
+//      transaction, so a crash mid-move can't leave orders inconsistent.
 exports.moveTask = async (req, res) => {
+  const { newStatus, newOrder } = req.body;
+
+  if (!VALID_STATUSES.includes(newStatus)) {
+    return res.status(400).json({ message: `newStatus must be one of: ${VALID_STATUSES.join(', ')}` });
+  }
+  if (typeof newOrder !== 'number' || !Number.isFinite(newOrder) || newOrder < 0) {
+    return res.status(400).json({ message: 'newOrder must be a non-negative number' });
+  }
+
+  const task = req.task;
+  const oldStatus = task.status;
+  const oldOrder = task.order;
+
+  const session = await mongoose.startSession();
   try {
-    const { taskId } = req.params;
-    const { newStatus, newOrder } = req.body;
-    const userId = req.userId;
+    session.startTransaction();
 
-    const task = await Task.findById(taskId);
-    if (!task) return res.status(404).json({ message: 'Task not found' });
+    const ops = buildReorderOperations({
+      workspaceId: task.workspace,
+      taskId: task._id,
+      oldStatus,
+      oldOrder,
+      newStatus,
+      newOrder
+    });
 
-    // FIX: added null check on workspace
-    const workspace = await Workspace.findById(task.workspace);
-    if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
-
-    const isMember = workspace.members.some(m => m.user.toString() === userId);
-    if (!isMember) return res.status(403).json({ message: 'Not authorized' });
-
-    const oldStatus = task.status;
+    if (ops.length > 0) {
+      await Task.bulkWrite(ops, { session });
+    }
 
     task.status = newStatus;
-    task.order  = newOrder;
-    await task.save();
+    task.order = newOrder;
+    await task.save({ session });
 
-    if (oldStatus !== newStatus) {
-      await Task.updateMany(
-        { workspace: task.workspace, status: newStatus, _id: { $ne: taskId }, order: { $gte: newOrder } },
-        { $inc: { order: 1 } }
-      );
-    }
+    await session.commitTransaction();
 
     await task.populate([
       { path: 'creator', select: 'name email' },
@@ -244,31 +218,34 @@ exports.moveTask = async (req, res) => {
     res.json({ success: true, message: 'Task moved successfully', task });
 
   } catch (error) {
+    await session.abortTransaction().catch(() => {});
     console.error('Move task error:', error);
+
+    // Transactions require MongoDB to be running as a replica set (Atlas
+    // clusters are by default; a bare local `mongod` is not). Surface that
+    // clearly instead of a generic 500 during dev.
+    if (error.message && error.message.includes('Transaction numbers')) {
+      return res.status(500).json({
+        message: 'Move failed: this MongoDB instance is not configured as a replica set, so transactions are unavailable. Use MongoDB Atlas or run mongod with --replSet locally.'
+      });
+    }
+
     res.status(500).json({ message: error.message });
+  } finally {
+    session.endSession();
   }
 };
 
 // ================= ADD COMMENT =================
 exports.addComment = async (req, res) => {
   try {
-    const { taskId } = req.params;
     const { text, mentions = [] } = req.body;
     const userId = req.userId;
+    const task = req.task;
 
     if (!text || !text.trim()) {
       return res.status(400).json({ message: 'Comment text is required' });
     }
-
-    const task = await Task.findById(taskId);
-    if (!task) return res.status(404).json({ message: 'Task not found' });
-
-    // FIX: added null check on workspace
-    const workspace = await Workspace.findById(task.workspace);
-    if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
-
-    const isMember = workspace.members.some(m => m.user.toString() === userId);
-    if (!isMember) return res.status(403).json({ message: 'Not authorized' });
 
     task.comments.push({ user: userId, text, mentions });
     await task.save();
@@ -303,23 +280,13 @@ exports.addComment = async (req, res) => {
 // ================= DELETE COMMENT =================
 exports.deleteComment = async (req, res) => {
   try {
-    const { taskId, commentId } = req.params;
+    const { commentId } = req.params;
     const userId = req.userId;
-
-    const task = await Task.findById(taskId);
-    if (!task) return res.status(404).json({ message: 'Task not found' });
+    const task = req.task;
+    const member = req.workspaceMember;
 
     const comment = task.comments.id(commentId);
     if (!comment) return res.status(404).json({ message: 'Comment not found' });
-
-    // FIX: added null check on workspace
-    const workspace = await Workspace.findById(task.workspace);
-    if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
-
-    // FIX: added null check on member — user may have been removed from workspace
-    // after posting the comment. Without this, member.role throws a crash (500)
-    const member = workspace.members.find(m => m.user.toString() === userId);
-    if (!member) return res.status(403).json({ message: 'Not a workspace member' });
 
     if (comment.user.toString() !== userId && !['admin', 'owner'].includes(member.role)) {
       return res.status(403).json({ message: 'Not authorized' });
