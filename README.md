@@ -3,14 +3,13 @@
 <img src="https://img.shields.io/badge/FlowSpace-Real--time%20Collaboration-6366f1?style=for-the-badge&logo=lightning&logoColor=white" alt="FlowSpace" />
 
 # ⚡ FlowSpace
-## 🚀 Preview
-
-![Board](./screenshots/board1.PNG)
 
 ### Real-time Collaborative Task Management — Built for Modern Teams
 
+![Board](./screenshots/board1.PNG)
+
 [![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-flow--space--black.vercel.app-6366f1?style=flat-square)](https://flow-space-black.vercel.app)
-[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)](https://reactjs.org)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)](https://reactjs.org)
 [![Node.js](https://img.shields.io/badge/Node.js-Express-339933?style=flat-square&logo=node.js)](https://nodejs.org)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=flat-square&logo=mongodb)](https://mongodb.com)
 [![Socket.IO](https://img.shields.io/badge/Socket.IO-Real--time-010101?style=flat-square&logo=socket.io)](https://socket.io)
@@ -22,15 +21,15 @@
 
 ## 📌 Overview
 
-**FlowSpace** is a full-stack, real-time collaborative task management application. Teams can create shared workspaces, manage tasks on a drag-and-drop Kanban board, collaborate live with Socket.IO, and track progress through detailed analytics — all in a beautifully designed interface with full dark/light mode support.
+**FlowSpace** is a full-stack, real-time collaborative task management application. Teams create shared workspaces, manage tasks on a drag-and-drop Kanban board, collaborate live with Socket.IO, and track progress through analytics, in an interface with full dark/light mode support.
 
-> Built as a production-grade MERN stack project with httpOnly cookie auth, role-based access control, real-time sync across all connected clients, and a responsive UI that works seamlessly from mobile to desktop.
+> A MERN stack project with httpOnly cookie auth, role-based access control, server-driven real-time sync across all connected clients, and a responsive UI from mobile to desktop.
 
 ## 💡 Problem & Solution
 
-Traditional task management tools lack real-time collaboration, causing delays and inconsistent task states.
+Traditional task tools lack real-time collaboration, which leads to delays and inconsistent task states.
 
-FlowSpace solves this using WebSockets (Socket.IO), enabling instant synchronization across all users with optimistic UI updates for a seamless experience.
+FlowSpace uses WebSockets (Socket.IO) so every teammate sees changes instantly, with optimistic UI updates so the board still feels instant for the person acting.
 
 ---
 
@@ -38,74 +37,64 @@ FlowSpace solves this using WebSockets (Socket.IO), enabling instant synchroniza
 
 **[https://flow-space-black.vercel.app](https://flow-space-black.vercel.app)**
 
-| Test Account | Credentials |
-|---|---|
-| Owner | `yuvi@gmail.com` / `123456` |
-| Member | `sakshi.2327cse1279@kiet.edu` / `123456` |
+Sign up with any email to try it, or open it in two browser tabs with two accounts to see real-time sync.
 
 ---
 
 ## ✨ Features
 
 ### 🗂️ Workspace Management
-- Create multiple workspaces with custom names, descriptions, and color themes
-- Invite members by email with role assignment (Owner / Admin / Member)
-- Role-based access control — only owners can change member roles, only admins/owners can invite
-- Export workspace data as **JSON** or **CSV** with one click
+- Multiple workspaces with custom names, descriptions and color themes
+- Invite members by email with a role (Owner / Admin / Member)
+- Role-based access control:
+  - **Owner:** everything, including changing roles, inviting admins and removing admins
+  - **Admin:** edit workspace, invite and remove regular members
+  - **Member:** create and work on tasks
+- Export workspace data as **JSON** or **CSV** (CSV cells are escaped against spreadsheet formula injection)
 - 3-step confirmation for irreversible workspace deletion
 
 ### 📋 Kanban Board
-- Drag-and-drop tasks across **To Do**, **In Progress**, and **Done** columns using `@dnd-kit`
-- Optimistic UI updates — board feels instant, rolls back cleanly on failure
-- Real-time sync — any teammate's drag/create/delete appears on your board within milliseconds
-- Search tasks by title, description, or tags
-- Filter tasks by priority, status, and assignee simultaneously
+- Drag-and-drop across **To Do**, **In Progress** and **Done** using `@dnd-kit`
+- Optimistic updates, rolled back cleanly if the API call fails
+- Real-time sync: a teammate's create / move / edit / delete appears on your board within milliseconds
+- Search by title, description or tags; filter by priority, status and assignee
 
 ### ✅ Task Management
-- Rich task creation: title, description, priority (Low/Medium/High/Urgent), status, assignee, due date, tags
+- Title, description, priority (Low / Medium / High / Urgent), status, assignee, due date, tags
 - Overdue detection with visual indicators
-- Inline comments with **@mention** support and member dropdown autocomplete
-- Real-time comment sync across all clients
+- Comments with **@mention** autocomplete (only workspace members can be mentioned)
+- Real-time comment add and delete
 
 ### 📊 Analytics Dashboard
-- Completion rate progress bar
-- Task breakdown by status (donut chart) and priority (bar chart)
-- 7-day activity area chart (created vs completed)
-- Team performance leaderboard with per-member completion rates
+- Completion rate, status breakdown (donut), priority breakdown (bar)
+- 7-day activity chart (created vs completed)
+- Team leaderboard with per-member completion rates
 - Quick insights: top contributor, busiest priority, daily velocity, pending count
 
 ### 📅 Calendar View
-- Month and week views
-- Tasks plotted by due date with status color coding
-- Overdue indicators and upcoming tasks sidebar panel
-- Click any date to create a task with that due date pre-filled
+- Month and week views with tasks plotted by due date
+- Overdue indicators and an upcoming-tasks panel
+- Click a date to create a task with that due date pre-filled
 
 ### 🔔 Notifications
-- Real-time notification delivery via Socket.IO
-- Notification types: task assigned, commented, mentioned, status changed, member joined/left
-- Mark individual or all as read
-- Bell badge with live unread count
+- Real-time delivery via Socket.IO
+- Types: task assigned / unassigned, commented, mentioned, status changed, member joined / left, role changed
+- Mark one or all as read, delete one or clear all, live unread badge
 
-### 🌗 Theme System
-- Full dark and light mode with smooth transitions
-- Theme persists across sessions via localStorage
-- Custom CSS variable system — every component adapts automatically
-
-### 📱 Responsive Design
-- Mobile-first layouts across all views
-- Collapsible sidebar with hamburger menu on mobile
-- Scrollable Kanban on small screens
-- Adaptive stats grids and chart sizing
+### 🌗 Theme System & 📱 Responsive Design
+- Dark and light mode, persisted in localStorage, driven by CSS variables
+- Mobile-first layouts, collapsible sidebar, scrollable Kanban on small screens
 
 ---
 
 ## ⚡ Key Technical Highlights
 
-- Real-time communication using Socket.IO (workspace-based rooms)
-- Optimistic UI updates for instant user experience
-- Secure authentication using JWT + httpOnly cookies
-- Role-based access control system
-- Modular and scalable backend architecture
+- **Server-driven real-time:** writes go through REST (with auth and permission checks), and the server broadcasts the result to the workspace room
+- Workspace-based Socket.IO rooms; automatic room re-join and data refetch after a reconnect
+- Optimistic UI with rollback
+- JWT in httpOnly cookies, role-based access control
+- Server-side validation and a 58-test Jest suite
+- Modular backend (controllers, middleware, models, utils)
 
 ## 📸 Screenshots
 
@@ -129,49 +118,57 @@ FlowSpace solves this using WebSockets (Socket.IO), enabling instant synchroniza
 ### 🔔 Notifications Panel
 ![Notifications](./screenshots/notification.PNG)
 
+---
 
 ## ⚡ Challenges & Solutions
 
 - **Real-time consistency**
-  - Solved using partial socket updates instead of full object replacement
-
-- **Duplicate notifications**
-  - Managed by separating global and local socket listeners
-
+  - Remote moves patch only the changed fields and insert the card at the right index instead of replacing the whole task.
+- **Trusting the client over a socket**
+  - Early versions let clients emit `task:create` / `task:move` / `task:delete` over the socket. Any user could broadcast fake events, or touch tasks in other workspaces. Now all writes go through REST and only the server broadcasts.
+- **Silent loss of live updates after reconnect**
+  - A reconnect creates a new socket that is in no rooms. The client now re-joins its workspace room on every `connect` and refetches to catch missed events.
+- **Duplicate notifications and double events**
+  - The workspace socket hook runs once (in the dashboard), and the global notification listener only refreshes the unread count.
+- **Drag-and-drop ordering**
+  - Moves run in a MongoDB transaction (with a fallback for standalone `mongod`), positions are clamped, and gaps are closed on delete.
 - **Secure authentication**
-  - Implemented httpOnly cookie-based JWT to prevent XSS attacks
-  
+  - httpOnly cookie JWT against XSS, type-checked login inputs against NoSQL injection, and a DB check so a deleted user's token stops working.
+
+---
+
 ## 🛠️ Tech Stack
 
 ### Frontend
 | Technology | Purpose |
 |---|---|
-| **React 18** | UI library with hooks |
+| **React 19** | UI library with hooks |
 | **Redux Toolkit** | Global state management |
-| **Socket.IO Client** | Real-time bidirectional events |
-| **@dnd-kit** | Accessible drag-and-drop |
+| **Socket.IO Client** | Real-time events |
+| **@dnd-kit** | Drag-and-drop |
 | **Recharts** | Analytics charts |
-| **React Router v6** | Client-side routing |
+| **React Router v7** | Client-side routing |
 | **React Hot Toast** | Toast notifications |
-| **Lucide React** | Icon system |
+| **Lucide React** | Icons |
 
 ### Backend
 | Technology | Purpose |
 |---|---|
-| **Node.js + Express** | REST API server |
+| **Node.js + Express** | REST API |
 | **MongoDB + Mongoose** | Database + ODM |
 | **Socket.IO** | WebSocket server |
 | **bcryptjs** | Password hashing |
-| **jsonwebtoken** | JWT generation |
+| **jsonwebtoken** | JWT |
 | **cookie-parser** | httpOnly cookie handling |
-| **cors** | Cross-origin configuration |
+| **express-rate-limit** | Rate limiting on auth routes |
+| **Jest** | Tests |
 
 ### Infrastructure
 | Service | Usage |
 |---|---|
-| **Vercel** | Frontend deployment |
-| **Render / Railway** | Backend deployment |
-| **MongoDB Atlas** | Cloud database |
+| **Vercel** | Frontend |
+| **Render / Railway** | Backend |
+| **MongoDB Atlas** | Database |
 
 ---
 
@@ -180,97 +177,64 @@ FlowSpace solves this using WebSockets (Socket.IO), enabling instant synchroniza
 ```
 flowspace/
 ├── client/                          # React frontend (Vite)
-│   ├── src/
-│   │   ├── components/              # 25+ reusable UI components
-│   │   │   ├── KanbanBoard.jsx      # DnD board with real-time sync
-│   │   │   ├── TaskCard.jsx         # Sortable task card
-│   │   │   ├── StatisticsPanel.jsx  # Full analytics dashboard
-│   │   │   ├── CalendarView.jsx     # Month/week calendar
-│   │   │   ├── MembersPanel.jsx     # Team management
-│   │   │   ├── NotificationDrawer.jsx
-│   │   │   └── ...
-│   │   ├── context/
-│   │   │   ├── SocketContext.jsx    # Socket.IO provider
-│   │   │   └── ThemeContext.jsx     # Dark/light theme provider
-│   │   ├── hooks/
-│   │   │   ├── useWorkspaceSocket.js  # Real-time task events
-│   │   │   ├── useNotificationSocket.js
-│   │   │   └── Usesocket.js
-│   │   ├── pages/
-│   │   │   ├── Dashboard.jsx        # Main app shell
-│   │   │   ├── Login.jsx
-│   │   │   └── Signup.jsx
-│   │   ├── redux/
-│   │   │   ├── slices/
-│   │   │   │   ├── authSlice.js
-│   │   │   │   ├── taskSlice.js
-│   │   │   │   ├── workspaceSlice.js
-│   │   │   │   ├── notificationSlice.js
-│   │   │   │   └── statisticsSlice.js
-│   │   │   └── store.js             # Root reducer with full reset on logout
-│   │   └── services/
-│   │       └── api.js               # Axios instance + interceptors
+│   └── src/
+│       ├── components/              # KanbanBoard, TaskCard, StatisticsPanel, CalendarView, MembersPanel, ...
+│       ├── context/                 # SocketContext (socket + online users), ThemeContext
+│       ├── hooks/                   # useWorkspaceSocket, useNotificationSocket, ...
+│       ├── pages/                   # Dashboard, Login, Signup
+│       ├── redux/slices/            # auth, task, workspace, notification, statistics
+│       ├── services/api.js          # Axios instance + interceptors
+│       └── utils/                   # socketId, toast, ...
 │
-└── server/                          # Express backend
-    └── src/
-        ├── controllers/
-        │   ├── authController.js
-        │   ├── taskController.js
-        │   ├── workspaceController.js
-        │   └── notificationController.js
-        ├── middleware/
-        │   ├── auth.js              # JWT verification from httpOnly cookie
-        │   ├── workspace.js         # Role-based route protection
-        │   └── socketAuth.js        # Socket handshake auth
-        ├── models/
-        │   ├── Task.js
-        │   ├── User.js
-        │   ├── Workspace.js
-        │   └── Notification.js
-        ├── routes/
-        │   ├── authRoutes.js
-        │   ├── taskRoutes.js
-        │   ├── workspaceRoutes.js
-        │   └── notificationRoutes.js
-        ├── socket/
-        │   └── workspaceSocket.js   # All socket event handlers
-        └── server.js
+└── server/
+    ├── src/
+    │   ├── config/                  # socket.js, origins.js (CORS allow-list)
+    │   ├── controllers/             # auth, task, workspace, notification
+    │   ├── middelware/              # auth, workspace (roles), task, socketAuth, rateLimiter
+    │   ├── models/                  # User, Workspace, Task, Notification
+    │   ├── routes/
+    │   ├── sockets/workspaceSocket.js  # rooms, presence, typing / editing indicators
+    │   ├── utils/                   # realtime, validators, httpErrors, withTransaction
+    │   └── server.js
+    └── tests/                       # Jest tests (58)
 ```
 
 ---
 
 ## 🔐 Authentication & Security
 
-- **httpOnly cookies** — JWT never stored in localStorage, immune to XSS
-- **Cookie-based auth** — `withCredentials: true` on all requests, cookie sent automatically
-- **Role-based access control** — Owner > Admin > Member permission hierarchy
-- **Route protection** — middleware validates cookie on every protected endpoint
-- **Socket auth** — WebSocket handshake verifies the same JWT cookie
-- **Full state reset on logout** — Redux `rootReducer` sets `state = undefined` on logout/force-logout, preventing any data leak between user sessions
-- **Force logout** — `api.js` 401 interceptor fires `force-logout` event; App.jsx listens and clears all state + redirects
+- **httpOnly cookie JWT**, never stored in localStorage
+- **Auth on every request:** middleware verifies the cookie and checks the user still exists
+- **Role-based access control:** Owner > Admin > Member, enforced on the server
+- **Socket auth:** the handshake verifies the same JWT; connections are dropped when the token expires, and removed members are evicted from the workspace room
+- **Strict CORS allow-list** (no wildcards), shared by Express and Socket.IO
+- **Input validation:** type checks on login (NoSQL-injection safe), ID validation, field whitelists on task updates, mentions and assignees restricted to workspace members
+- **Rate limiting** on login / signup (only failed attempts count; `trust proxy` set in production)
+- **No internal error details** are returned to clients in production
+- **Full Redux reset on logout** so no data leaks between sessions
 
 ---
 
 ## ⚡ Real-time Architecture
 
 ```
-Client A                    Server                     Client B
-   │                           │                           │
-   │── task:create ──────────► │                           │
-   │                           │── task:created ─────────► │
-   │                           │                           │
-   │── task:move ───────────► │                            │
-   │   (optimistic update)     │── task:moved ───────────► │
-   │                           │   (_partialMove flag)     │
-   │── comment:add ──────────► │                           │
-   │                           │── comment:added ────────► │
-   │                           │── notification:new ─────► │
+Client A                      Server                        Client B
+   │                             │                             │
+   │── REST: move task ────────► │  auth + role + validation   │
+   │   (optimistic UI)           │  save to MongoDB            │
+   │                             │── task:moved ─────────────► │
+   │                             │   (to the workspace room)   │
+   │                             │                             │
+   │── REST: add comment ──────► │── comment:added ──────────► │
+   │                             │── notification:new ───────► │ (mentioned / assigned user)
 ```
 
 Key design decisions:
-- **Optimistic updates** for drag-and-drop: UI moves instantly, rolls back on API failure
-- **`_partialMove` flag** in socket handler: task:moved only patches `status` field, never replaces the full task object (prevents wiping title/tags/assignee)
-- **Split notification responsibilities**: `NotificationListener` (global) only refreshes unread count; `useNotificationSocket` (dashboard) handles toasts and list updates — prevents duplicate notifications
+- **Writes go through REST, the server broadcasts.** Permission checks live in one place, and a client cannot send fake events to other users.
+- **Sender is excluded** from the broadcast (via the client's socket id), so the person who acted doesn't get a duplicate.
+- **Per-user rooms** (`user:<id>`) carry notifications, so every open tab of a user receives them.
+- **Reconnect-safe:** the client re-joins its room and refetches tasks after every reconnect.
+- **Presence:** the server tracks who is online per workspace (deduplicated across tabs).
 
 ---
 
@@ -278,38 +242,36 @@ Key design decisions:
 
 ### Prerequisites
 - Node.js 18+
-- MongoDB (local or Atlas)
-- npm or yarn
+- MongoDB (Atlas, or a local replica set; a standalone `mongod` also works, task moves just run without a transaction)
 
-### 1. Clone the repository
+### 1. Clone
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/flowspace.git
-cd flowspace
+git clone https://github.com/templehubsakshi/FlowSpace.git
+cd FlowSpace
 ```
 
-### 2. Backend setup
+### 2. Backend
 
 ```bash
 cd server
 npm install
 ```
 
-Create `server/.env`:
+Create `server/.env` (see `.env.example`):
 ```env
 PORT=5000
-MONGODB_URI=mongodb+srv://your-connection-string
-JWT_SECRET=your-super-secret-jwt-key-min-32-chars
-CLIENT_URL=http://localhost:5173
+MONGO_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/flowspace
+JWT_SECRET=a-long-random-string
 NODE_ENV=development
+CLIENT_URLS=
 ```
 
-Start the server:
 ```bash
 npm run dev
 ```
 
-### 3. Frontend setup
+### 3. Frontend
 
 ```bash
 cd client
@@ -322,15 +284,17 @@ VITE_API_URL=http://localhost:5000/api
 VITE_SOCKET_URL=http://localhost:5000
 ```
 
-Start the dev server:
 ```bash
 npm run dev
 ```
 
-### 4. Open in browser
+Open `http://localhost:5173`.
 
-```
-http://localhost:5173
+### 4. Run the tests
+
+```bash
+cd server
+npm test
 ```
 
 ---
@@ -340,17 +304,19 @@ http://localhost:5173
 ### Server (`server/.env`)
 | Variable | Description | Required |
 |---|---|---|
-| `PORT` | Server port (default: 5000) | Yes |
-| `MONGODB_URI` | MongoDB connection string | Yes |
-| `JWT_SECRET` | Secret for signing JWTs (32+ chars) | Yes |
-| `CLIENT_URL` | Frontend URL for CORS | Yes |
-| `NODE_ENV` | `development` or `production` | Yes |
+| `PORT` | Server port (default 5000) | No |
+| `MONGO_URI` | MongoDB connection string | Yes |
+| `JWT_SECRET` | Secret for signing JWTs; the server refuses to start without it | Yes |
+| `NODE_ENV` | `development` or `production`. Set `production` when deployed (secure cookies, `trust proxy`, generic errors) | Yes |
+| `CLIENT_URLS` | Extra allowed browser origins, comma-separated, exact match (e.g. a Vercel preview URL or custom domain) | No |
+
+`localhost` dev ports and the production Vercel URL are already in the default allow-list.
 
 ### Client (`client/.env`)
 | Variable | Description | Required |
 |---|---|---|
-| `VITE_API_URL` | Backend API base URL | Yes |
-| `VITE_SOCKET_URL` | Socket.IO server URL | Yes |
+| `VITE_API_URL` | Backend API base URL | Yes (in production) |
+| `VITE_SOCKET_URL` | Socket.IO server URL | Yes (in production) |
 
 ---
 
@@ -359,106 +325,104 @@ http://localhost:5173
 ### Auth
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| POST | `/api/auth/signup` | Register new user | No |
+| POST | `/api/auth/signup` | Register | No |
 | POST | `/api/auth/login` | Login, sets httpOnly cookie | No |
-| GET | `/api/auth/me` | Verify session, return user | Yes |
-| POST | `/api/auth/logout` | Clear auth cookie | Yes |
+| GET | `/api/auth/me` | Verify session | Yes |
+| POST | `/api/auth/logout` | Clear cookie | No |
 
 ### Workspaces
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| GET | `/api/workspaces` | Get user's workspaces | Yes |
+| GET | `/api/workspaces` | My workspaces | Yes |
 | POST | `/api/workspaces` | Create workspace | Yes |
+| GET | `/api/workspaces/:id` | Get workspace | Member |
 | PUT | `/api/workspaces/:id` | Update workspace | Admin+ |
 | DELETE | `/api/workspaces/:id` | Delete workspace | Owner |
-| POST | `/api/workspaces/:id/invite` | Invite member by email | Admin+ |
-| DELETE | `/api/workspaces/:id/members/:memberId` | Remove member | Admin+ |
+| POST | `/api/workspaces/:id/invite` | Invite member by email (inviting an admin: owner only) | Admin+ |
+| DELETE | `/api/workspaces/:id/members/:memberId` | Remove member (removing an admin: owner only) | Admin+ |
+| POST | `/api/workspaces/:id/leave` | Leave workspace | Member |
 | PATCH | `/api/workspaces/:id/members/:memberId/role` | Change member role | Owner |
 
 ### Tasks
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| GET | `/api/tasks/workspace/:workspaceId` | Get all tasks (grouped by status) | Member+ |
-| POST | `/api/tasks` | Create task | Member+ |
-| PUT | `/api/tasks/:id` | Update task | Member+ |
-| DELETE | `/api/tasks/:id` | Delete task | Creator/Admin+ |
-| PATCH | `/api/tasks/:id/move` | Move task (status + order) | Member+ |
-| POST | `/api/tasks/:id/comments` | Add comment with @mentions | Member+ |
-| DELETE | `/api/tasks/:id/comments/:commentId` | Delete comment | Creator |
+| GET | `/api/tasks/workspace/:workspaceId` | All tasks, grouped by status | Member |
+| GET | `/api/tasks/:id` | Get one task | Member |
+| POST | `/api/tasks` | Create task | Member |
+| PUT | `/api/tasks/:id` | Update task | Member |
+| DELETE | `/api/tasks/:id` | Delete task | Member |
+| PATCH | `/api/tasks/:id/move` | Move task (status + order) | Member |
+| POST | `/api/tasks/:id/comments` | Add comment with @mentions | Member |
+| DELETE | `/api/tasks/:id/comments/:commentId` | Delete comment | Member |
 
 ### Notifications
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| GET | `/api/notifications` | Get notification list | Yes |
-| GET | `/api/notifications/unread-count` | Get unread count | Yes |
+| GET | `/api/notifications` | List | Yes |
+| GET | `/api/notifications/unread-count` | Unread count | Yes |
 | PATCH | `/api/notifications/mark-all-read` | Mark all as read | Yes |
-| PATCH | `/api/notifications/:id` | Mark single as read | Yes |
-| DELETE | `/api/notifications/:id` | Delete single | Yes |
+| PATCH | `/api/notifications/:id` | Mark one as read | Yes |
+| DELETE | `/api/notifications/:id` | Delete one | Yes |
 | DELETE | `/api/notifications` | Clear all | Yes |
 
 ---
 
 ## 🔌 Socket Events
 
+Writes happen over REST. Sockets are used for rooms, presence, typing indicators and for the server to push updates.
+
 ### Client → Server
 | Event | Payload | Description |
 |---|---|---|
-| `workspace:join` | `workspaceId` | Join workspace room |
-| `workspace:leave` | `workspaceId` | Leave workspace room |
-| `task:create` | `{ workspaceId, task }` | Broadcast new task |
-| `task:move` | `{ workspaceId, taskId, newStatus, oldStatus, newOrder }` | Broadcast task move |
-| `task:delete` | `{ workspaceId, taskId }` | Broadcast task deletion |
-| `comment:add` | `{ workspaceId, taskId, comment }` | Broadcast new comment |
+| `workspace:join` | `workspaceId` | Join a workspace room (membership is verified) |
+| `workspace:leave` | `workspaceId` | Leave the room |
+| `comment:typing` | `{ workspaceId, taskId, ... }` | Typing indicator |
+| `task:editing-start` / `task:editing-end` | `{ workspaceId, taskId }` | Editing indicator |
 
 ### Server → Client
-| Event | Payload | Description |
-|---|---|---|
-| `task:created` | `{ task }` | New task created by another user |
-| `task:updated` | `{ task, updatedBy }` | Task edited by another user |
-| `task:moved` | `{ taskId, newStatus, oldStatus }` | Task moved by another user |
-| `task:deleted` | `{ taskId }` | Task deleted by another user |
-| `comment:added` | `{ taskId, comment }` | Comment added by another user |
-| `notification:new` | Notification object | New notification for this user |
-| `user:joined` | `{ userName }` | User joined workspace |
-| `user:left` | `{ userName }` | User left workspace |
+| Event | Description |
+|---|---|
+| `task:created` / `task:updated` / `task:moved` / `task:deleted` | Task changes, broadcast after a successful REST call |
+| `comment:added` / `comment:deleted` | Comment changes |
+| `notification:new` | New notification for this user |
+| `user:joined` / `user:left` / `workspace:online-users` | Presence |
+| `workspace:removed` / `workspace:deleted` | You were removed, or the workspace was deleted |
+| `comment:typing` / `task:locked` / `task:unlocked` | Typing and editing indicators from teammates |
 
 ---
 
 ## 🎨 Design System
 
-FlowSpace uses a custom CSS variable-based design system:
+A custom CSS-variable design system:
+- **Two-layer theming:** variables on `:root` (light) and `.dark`
+- **Tokens:** surfaces, borders, text hierarchy, brand, status colors, shadows, transitions
+- **Responsive breakpoints:** 480px, 768px, 900px (sidebar collapse), 1024px, 1200px
 
-- **Two-layer theming**: CSS variables at `:root` (light) and `.dark` class (dark)
-- **Token categories**: surfaces, borders, text hierarchy, brand, status colors, shadows, transitions
-- **Component tokens**: semantic variables like `--surface-sunken`, `--text-tertiary`, `--brand-primary`
-- **Smooth transitions**: `background-color`, `border-color`, `color` all transition at 250ms on theme toggle
-- **Responsive breakpoints**: 480px (mobile), 768px (tablet), 900px (sidebar collapse), 1024px (desktop), 1200px (wide)
+---
+
+## 🗺️ Roadmap
+
+- Presence avatars in the UI (the data is already available from the server)
+- JWT revocation on logout (token versioning)
+- Password reset and email verification
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome!
-
 1. Fork the repository
-2. Create your feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
+2. Create your branch: `git checkout -b feature/amazing-feature`
+3. Commit: `git commit -m 'Add amazing feature'`
+4. Push: `git push origin feature/amazing-feature`
 5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
 
 ## 👨‍💻 Author
 
-Built with ❤️ by **Sakshi**
+Built by **Sakshi Gupta**
 
-[![GitHub](https://img.shields.io/badge/GitHub-Follow-181717?style=flat-square&logo=github)](https://github.com/YOUR_USERNAME)
+[![GitHub](https://img.shields.io/badge/GitHub-Follow-181717?style=flat-square&logo=github)](https://github.com/templehubsakshi)
 
 ---
 
