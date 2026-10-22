@@ -1,244 +1,84 @@
-// const Task = require('../models/Task');
-
-// const onlineUsers = new Map();
-
-// const handleWorkspaceSocket = (io, socket) => {
-//   onlineUsers.set(socket.userId, socket.id);
-  
-//   // JOIN WORKSPACE
-//   socket.on('workspace:join', async (workspaceId) => {
-//     try {
-//       const rooms = Array.from(socket.rooms);
-//       rooms.forEach(room => {
-//         if (room !== socket.id) socket.leave(room);
-//       });
-
-//       socket.join(`workspace:${workspaceId}`);
-//       console.log(`User ${socket.user.name} joined workspace:${workspaceId}`);
-
-//       socket.to(`workspace:${workspaceId}`).emit('user:joined', { 
-//         userId: socket.userId,
-//         userName: socket.user.name,
-//         userEmail: socket.user.email
-//       });
-
-//       const socketsInRoom = await io.in(`workspace:${workspaceId}`).fetchSockets();
-//       const onlineUsersList = socketsInRoom.map(s => ({
-//         userId: s.userId,
-//         userName: s.user.name,
-//         userEmail: s.user.email
-//       }));
-//       socket.emit('workspace:online-users', onlineUsersList);
-
-//     } catch (error) {
-//       console.error('Error in workspace:join', error);
-//       socket.emit('error', { message: 'An error occurred while joining the workspace.' });
-//     }
-//   });
-
-//   // LEAVE WORKSPACE
-//   socket.on('workspace:leave', (workspaceId) => {
-//     socket.leave(`workspace:${workspaceId}`);
-//     socket.to(`workspace:${workspaceId}`).emit('user:left', {
-//       userId: socket.userId,
-//       userName: socket.user.name
-//     });
-//   });
-
-//   // TASK CREATE
-//   socket.on('task:create', async (data) => {
-//     try {
-//       const { workspaceId, task } = data;
-//       socket.to(`workspace:${workspaceId}`).emit('task:created', { 
-//         task, 
-//         createdBy: socket.user.name 
-//       });
-//     } catch (error) {
-//       console.error('Error in task:create', error);
-//     }
-//   });
-
-//   // TASK UPDATE
-//   socket.on('task:update', async (data) => {
-//     try {
-//       const { workspaceId, taskId, updates } = data;
-//       const task = await Task.findById(taskId);
-//       if (!task) return;
-
-//       Object.assign(task, updates);
-//       await task.save();
-//       socket.to(`workspace:${workspaceId}`).emit('task:updated', { 
-//         taskId, 
-//         updates, 
-//         updatedBy: socket.user.name 
-//       });
-//     } catch (error) {
-//       console.error('Error in task:update', error);
-//     }
-//   });
-
-//   // TASK MOVE
-//   socket.on('task:move', async (data) => {
-//     try {
-//       const { workspaceId, taskId, newStatus, newOrder } = data;
-//       const task = await Task.findById(taskId);
-//       if (!task) return;
-
-//       const oldStatus = task.status;
-//       task.status = newStatus;
-//       task.order = newOrder;
-//       await task.save();
-
-//       socket.to(`workspace:${workspaceId}`).emit('task:moved', { 
-//         taskId, 
-//         newStatus, 
-//         oldStatus, 
-//         movedBy: socket.user.name 
-//       });
-//     } catch (error) {
-//       console.error('Error in task:move', error);
-//     }
-//   });
-
-//   // TASK DELETE
-//   socket.on('task:delete', async (data) => {
-//     try {
-//       const { workspaceId, taskId } = data;
-//       await Task.findByIdAndDelete(taskId);
-//       socket.to(`workspace:${workspaceId}`).emit('task:deleted', { 
-//         taskId, 
-//         deletedBy: socket.user.name 
-//       });
-//     } catch (error) {
-//       console.error('Error in task:delete', error);
-//     }
-//   });
-
-//   // COMMENTS
-//   socket.on('comment:typing', (data) => {
-//     const { workspaceId, taskId } = data;
-//     socket.to(`workspace:${workspaceId}`).emit('comment:typing', { 
-//       taskId, 
-//       userName: socket.user.name, 
-//       userId: socket.userId 
-//     });
-//   });
-
-//   // ✅ FIXED: Just broadcast, don't save again (HTTP endpoint already saved it)
-//   socket.on('comment:add', async (data) => {
-//     try {
-//       const { workspaceId, taskId, comment } = data;
-      
-//       // ✅ Comment already saved by HTTP endpoint
-//       // Just broadcast to other users in workspace
-//       socket.to(`workspace:${workspaceId}`).emit('comment:added', { 
-//         taskId, 
-//         comment,  // Send the full comment object
-//         addedBy: socket.user.name 
-//       });
-      
-//       console.log(`📢 Broadcast comment:added for task ${taskId} in workspace ${workspaceId}`);
-//     } catch (error) {
-//       console.error('Error in comment:add', error);
-//     }
-//   });
-
-//   // TASK EDITING LOCK
-//   socket.on('task:editing-start', (data) => {
-//     const { workspaceId, taskId } = data;
-//     socket.to(`workspace:${workspaceId}`).emit('task:locked', { 
-//       taskId, 
-//       lockedBy: socket.user.name, 
-//       userId: socket.userId 
-//     });
-//   });
-
-//   socket.on('task:editing-end', (data) => {
-//     const { workspaceId, taskId } = data;
-//     socket.to(`workspace:${workspaceId}`).emit('task:unlocked', { taskId });
-//   });
-
-//   // DISCONNECT
-//   socket.on('disconnect', () => {
-//     onlineUsers.delete(socket.userId);
-//     const rooms = Array.from(socket.rooms);
-//     rooms.forEach(room => {
-//       if (room !== socket.id && room.startsWith('workspace:')) {
-//         socket.to(room).emit('user:left', { 
-//           userId: socket.userId, 
-//           userName: socket.user.name 
-//         });
-//       }
-//     });
-//   });
-// };
-
-// // Export the handler and a getter for onlineUsers
-// module.exports = handleWorkspaceSocket;
-// module.exports.getOnlineUsers = () => onlineUsers;
-const Task      = require('../models/Task');
 const Workspace = require('../models/Workspace');
+const { isObjectId } = require('../utils/validators');
+const { workspaceRoom, userRoom } = require('../utils/realtime');
 
-// FIX: this used to be Map<userId, socketId> — a single string. Opening a
-// second tab/device just overwrote the first tab's socket id, so
-// notifications silently stopped reaching whichever tab wasn't "last in".
-// Now it's Map<userId, Set<socketId>> so every open connection for a user
-// is tracked and can receive events.
-const onlineUsers = new Map();
+// What this file does now (and does NOT do):
+//
+//   ✅ presence  : workspace:join / workspace:leave / disconnect
+//   ✅ ephemeral : comment:typing, task:editing-start / -end
+//   ❌ NO data writes. task create/update/move/delete and comment add are done
+//      ONLY via REST; the REST controllers broadcast after the DB commit
+//      (see utils/realtime.js). The old client-driven handlers allowed forged
+//      broadcasts into any workspace and cross-workspace IDOR writes.
+//
+// Per-user notifications go to the `user:<id>` room that every socket joins —
+// no in-memory Map, so it also works across multiple servers (Redis adapter).
 
-function addOnlineSocket(userId, socketId) {
-  if (!onlineUsers.has(userId)) onlineUsers.set(userId, new Set());
-  onlineUsers.get(userId).add(socketId);
-}
-
-function removeOnlineSocket(userId, socketId) {
-  const sockets = onlineUsers.get(userId);
-  if (!sockets) return;
-  sockets.delete(socketId);
-  if (sockets.size === 0) onlineUsers.delete(userId);
-}
-
-// ── Helper: verify user is a member of the workspace ────────────────────────
 async function verifyMembership(userId, workspaceId) {
+  if (!isObjectId(workspaceId)) return false;
   const workspace = await Workspace.findById(workspaceId).select('members owner');
   if (!workspace) return false;
-  return workspace.members.some(m => m.user.toString() === userId.toString());
+  return workspace.members.some((m) => m.user.toString() === userId.toString());
+}
+
+const presenceUser = (socket) => ({
+  userId:    socket.userId,
+  userName:  socket.user.name,
+  userEmail: socket.user.email,
+});
+
+// Unique users (one entry per user even if they have several tabs open).
+async function listOnlineUsers(io, room) {
+  const sockets = await io.in(room).fetchSockets();
+  const byUser = new Map();
+  for (const s of sockets) {
+    // s.data (not s.user): fetchSockets() may return RemoteSockets
+    if (s.data?.userId && !byUser.has(s.data.userId)) {
+      byUser.set(s.data.userId, { userId: s.data.userId, userName: s.data.name, userEmail: s.data.email });
+    }
+  }
+  return [...byUser.values()];
 }
 
 const handleWorkspaceSocket = (io, socket) => {
-  addOnlineSocket(socket.userId, socket.id);
+  // All of this user's sockets (tabs/devices) share one room → notifications.
+  socket.join(userRoom(socket.userId));
+
+  // Announce "left" only if this was the user's LAST socket in that room.
+  async function announceLeft(room) {
+    const others = (await io.in(room).fetchSockets()).filter((s) => s.id !== socket.id);
+    const stillThere = others.some((s) => s.data?.userId === socket.userId);
+    if (!stillThere) {
+      socket.to(room).emit('user:left', { userId: socket.userId, userName: socket.user.name });
+    }
+  }
+
+  const joinedWorkspaceRooms = () =>
+    Array.from(socket.rooms).filter((r) => r.startsWith('workspace:'));
 
   // ── JOIN WORKSPACE ──────────────────────────────────────────────────────────
-  // ✅ FIX: Validate membership before allowing room join
   socket.on('workspace:join', async (workspaceId) => {
     try {
-      const isMember = await verifyMembership(socket.userId, workspaceId);
-      if (!isMember) {
+      if (!(await verifyMembership(socket.userId, workspaceId))) {
         socket.emit('error', { message: 'Not authorized to join this workspace' });
         return;
       }
 
-      // Leave all other workspace rooms first
-      Array.from(socket.rooms).forEach(room => {
-        if (room !== socket.id) socket.leave(room);
-      });
+      const room = workspaceRoom(workspaceId);
 
-      socket.join(`workspace:${workspaceId}`);
+      // FIX: only leave *workspace* rooms. The old code left every room except
+      // socket.id, which would also kick the socket out of its user:<id> room.
+      const previous = joinedWorkspaceRooms().filter((r) => r !== room);
+      for (const r of previous) {
+        socket.leave(r);
+        await announceLeft(r);
+      }
 
-      socket.to(`workspace:${workspaceId}`).emit('user:joined', {
-        userId:    socket.userId,
-        userName:  socket.user.name,
-        userEmail: socket.user.email,
-      });
+      socket.join(room);
+      socket.data.workspaceId = workspaceId;
 
-      const socketsInRoom   = await io.in(`workspace:${workspaceId}`).fetchSockets();
-      const onlineUsersList = socketsInRoom.map(s => ({
-        userId:    s.userId,
-        userName:  s.user.name,
-        userEmail: s.user.email,
-      }));
-      socket.emit('workspace:online-users', onlineUsersList);
-
+      socket.to(room).emit('user:joined', presenceUser(socket));
+      socket.emit('workspace:online-users', await listOnlineUsers(io, room));
     } catch (err) {
       console.error('workspace:join error', err);
       socket.emit('error', { message: 'Error joining workspace' });
@@ -246,183 +86,60 @@ const handleWorkspaceSocket = (io, socket) => {
   });
 
   // ── LEAVE WORKSPACE ─────────────────────────────────────────────────────────
-  socket.on('workspace:leave', (workspaceId) => {
-    socket.leave(`workspace:${workspaceId}`);
-    socket.to(`workspace:${workspaceId}`).emit('user:left', {
-      userId:   socket.userId,
-      userName: socket.user.name,
-    });
+  socket.on('workspace:leave', async (workspaceId) => {
+    if (!isObjectId(workspaceId)) return;
+    const room = workspaceRoom(workspaceId);
+    if (!socket.rooms.has(room)) return;
+    socket.leave(room);
+    if (socket.data.workspaceId === workspaceId) socket.data.workspaceId = null;
+    await announceLeft(room);
   });
 
-  // ── TASK CREATE ─────────────────────────────────────────────────────────────
-  // HTTP endpoint already created it — just broadcast to other clients
-  socket.on('task:create', (data) => {
-    const { workspaceId, task } = data;
-    socket.to(`workspace:${workspaceId}`).emit('task:created', {
-      task,
-      createdBy: socket.user.name,
-    });
-  });
+  // ── EPHEMERAL: typing / edit-lock ───────────────────────────────────────────
+  // The room is taken from what the server knows (socket.data.workspaceId), never
+  // from the client payload, and the socket must actually be inside it.
+  const currentRoom = () => {
+    const id = socket.data.workspaceId;
+    if (!id) return null;
+    const room = workspaceRoom(id);
+    return socket.rooms.has(room) ? room : null;
+  };
 
-  // ── TASK UPDATE ─────────────────────────────────────────────────────────────
-  // ✅ FIX 1: Verify membership before DB write
-  // ✅ FIX 2: Emit full task object (not just { taskId, updates })
-  //           so client reducer (updateTaskFromSocket) can correctly
-  //           match on _id and handle status changes
-  socket.on('task:update', async (data) => {
-    try {
-      const { workspaceId, taskId, updates } = data;
-
-      const isMember = await verifyMembership(socket.userId, workspaceId);
-      if (!isMember) {
-        socket.emit('error', { message: 'Not authorized' });
-        return;
-      }
-
-      const task = await Task.findById(taskId)
-        .populate('creator',  'name email')
-        .populate('assignee', 'name email');
-      if (!task) return;
-
-      Object.assign(task, updates);
-      await task.save();
-
-      // ✅ Send full task so updateTaskFromSocket works correctly
-      socket.to(`workspace:${workspaceId}`).emit('task:updated', {
-        task:      task.toObject(),
-        updatedBy: socket.user.name,
-      });
-    } catch (err) {
-      console.error('task:update error', err);
-    }
-  });
-
-  // ── TASK MOVE ───────────────────────────────────────────────────────────────
-  // ✅ FIX: Verify membership before DB write
-  socket.on('task:move', async (data) => {
-    try {
-      const { workspaceId, taskId, newStatus, newOrder, oldStatus } = data;
-
-      const isMember = await verifyMembership(socket.userId, workspaceId);
-      if (!isMember) {
-        socket.emit('error', { message: 'Not authorized' });
-        return;
-      }
-
-      const task = await Task.findById(taskId);
-      if (!task) return;
-
-      task.status = newStatus;
-      task.order  = newOrder;
-      await task.save();
-
-      socket.to(`workspace:${workspaceId}`).emit('task:moved', {
-        taskId,
-        newStatus,
-        oldStatus: oldStatus || task.status,
-        movedBy:   socket.user.name,
-      });
-    } catch (err) {
-      console.error('task:move error', err);
-    }
-  });
-
-  // ── TASK DELETE ─────────────────────────────────────────────────────────────
-  // ✅ FIX: Match HTTP auth rules — only creator, admin, or owner can delete
-  //         Previously only checked membership → regular members could delete
-  //         any task via socket even when HTTP would deny them
-  socket.on('task:delete', async (data) => {
-    try {
-      const { workspaceId, taskId } = data;
-
-      // Load workspace to check role
-      const workspace = await Workspace.findById(workspaceId).select('members owner');
-      if (!workspace) return;
-
-      const member = workspace.members.find(m => m.user.toString() === socket.userId.toString());
-      if (!member) {
-        socket.emit('error', { message: 'Not a workspace member' });
-        return;
-      }
-
-      const task = await Task.findById(taskId).select('creator');
-      if (!task) return;
-
-      const isCreator   = task.creator?.toString() === socket.userId.toString();
-      const isAdminRole = ['admin', 'owner'].includes(member.role);
-
-      if (!isCreator && !isAdminRole) {
-        socket.emit('error', { message: 'Only task creator, admin, or owner can delete this task' });
-        return;
-      }
-
-      await Task.findByIdAndDelete(taskId);
-
-      socket.to(`workspace:${workspaceId}`).emit('task:deleted', {
-        taskId,
-        deletedBy: socket.user.name,
-      });
-    } catch (err) {
-      console.error('task:delete error', err);
-    }
-  });
-
-  // ── COMMENT TYPING INDICATOR ────────────────────────────────────────────────
   socket.on('comment:typing', (data) => {
-    const { workspaceId, taskId } = data;
-    socket.to(`workspace:${workspaceId}`).emit('comment:typing', {
-      taskId,
-      userName: socket.user.name,
-      userId:   socket.userId,
+    const room = currentRoom();
+    if (!room || !isObjectId(data?.taskId)) return;
+    socket.to(room).emit('comment:typing', {
+      taskId: data.taskId, userName: socket.user.name, userId: socket.userId,
     });
   });
 
-  // ── COMMENT ADD ─────────────────────────────────────────────────────────────
-  // HTTP endpoint already saved it — just broadcast the saved comment
-  socket.on('comment:add', (data) => {
-    const { workspaceId, taskId, comment } = data;
-    socket.to(`workspace:${workspaceId}`).emit('comment:added', {
-      taskId,
-      comment,
-      addedBy: socket.user.name,
-    });
-  });
-
-  // ── TASK EDIT LOCK / UNLOCK ─────────────────────────────────────────────────
   socket.on('task:editing-start', (data) => {
-    const { workspaceId, taskId } = data;
-    socket.to(`workspace:${workspaceId}`).emit('task:locked', {
-      taskId,
-      lockedBy: socket.user.name,
-      userId:   socket.userId,
+    const room = currentRoom();
+    if (!room || !isObjectId(data?.taskId)) return;
+    socket.to(room).emit('task:locked', {
+      taskId: data.taskId, lockedBy: socket.user.name, userId: socket.userId,
     });
   });
 
   socket.on('task:editing-end', (data) => {
-    const { workspaceId, taskId } = data;
-    socket.to(`workspace:${workspaceId}`).emit('task:unlocked', { taskId });
+    const room = currentRoom();
+    if (!room || !isObjectId(data?.taskId)) return;
+    socket.to(room).emit('task:unlocked', { taskId: data.taskId });
   });
 
   // ── DISCONNECT ──────────────────────────────────────────────────────────────
-  // FIX: only announce user:left once this was the user's *last* open
-  // socket. Otherwise closing one tab would tell everyone the user left,
-  // even while they're still connected in another tab.
-  socket.on('disconnect', () => {
-    removeOnlineSocket(socket.userId, socket.id);
-    const stillOnline = onlineUsers.has(socket.userId);
-
-    if (!stillOnline) {
-      Array.from(socket.rooms).forEach(room => {
-        if (room !== socket.id && room.startsWith('workspace:')) {
-          socket.to(room).emit('user:left', {
-            userId:   socket.userId,
-            userName: socket.user.name,
-          });
-        }
-      });
+  // FIX: use 'disconnecting', not 'disconnect'. By the time 'disconnect' fires
+  // socket.rooms is already empty, so user:left was never broadcast when a tab
+  // was closed (confirmed by test).
+  socket.on('disconnecting', async () => {
+    for (const room of joinedWorkspaceRooms()) {
+      try {
+        await announceLeft(room);
+      } catch (err) {
+        console.error('announceLeft error', err);
+      }
     }
   });
 };
 
 module.exports = handleWorkspaceSocket;
-module.exports.getOnlineUsers = () => onlineUsers;

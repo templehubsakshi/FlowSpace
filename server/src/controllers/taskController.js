@@ -1,36 +1,115 @@
-const mongoose = require('mongoose');
 const Task = require('../models/Task');
+const Notification = require('../models/Notification');
 const { createNotification } = require('./notificationController');
 const { buildReorderOperations } = require('../utils/taskOrdering');
+const { emitToWorkspace, socketIdFromReq } = require('../utils/realtime');
+const { isObjectId, uniqueObjectIds } = require('../utils/validators');
+const { sendError } = require('../utils/httpErrors');
+const { runInOptionalTransaction, sessionOpts } = require('../utils/withTransaction');
 
 const VALID_STATUSES = ['todo', 'in-progress', 'done'];
+const VALID_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 
 // NOTE: membership/authorization is handled upstream by the route middleware
 // chain (loadTask -> loadWorkspace -> isMember), which attaches:
 //   req.task            (routes keyed by :taskId)
 //   req.workspace        (the workspace document)
 //   req.workspaceMember  (the caller's member record, incl. role)
-// so controllers below don't re-fetch the workspace or re-check membership.
+
+const POPULATE = [
+  { path: 'creator', select: 'name email' },
+  { path: 'assignee', select: 'name email' },
+  // FIX: update/move responses used to leave comments.user as a bare ObjectId.
+  // The client replaces the whole task with the response, so every comment
+  // author name disappeared after editing or dragging a task.
+  { path: 'comments.user', select: 'name email' },
+];
+
+const toPlain = (task) => (task.toObject ? task.toObject() : task);
+
+const isWorkspaceMember = (workspace, userId) =>
+  workspace.members.some((m) => m.user.toString() === userId.toString());
+
+// ── Validate + normalise task fields (shared by create & update) ─────────────
+// Returns { errors: [...], values: {...} } — values only has the fields present.
+function parseTaskFields(body = {}, workspace) {
+  const errors = [];
+  const values = {};
+
+  if (body.title !== undefined) {
+    if (typeof body.title !== 'string' || !body.title.trim()) errors.push('Title is required');
+    else if (body.title.trim().length > 200) errors.push('Title must be at most 200 characters');
+    else values.title = body.title.trim();
+  }
+
+  if (body.description !== undefined && body.description !== null) {
+    if (typeof body.description !== 'string') errors.push('Description must be text');
+    else if (body.description.length > 2000) errors.push('Description must be at most 2000 characters');
+    else values.description = body.description;
+  }
+
+  if (body.status !== undefined) {
+    if (!VALID_STATUSES.includes(body.status)) errors.push(`Status must be one of: ${VALID_STATUSES.join(', ')}`);
+    else values.status = body.status;
+  }
+
+  if (body.priority !== undefined) {
+    if (!VALID_PRIORITIES.includes(body.priority)) errors.push(`Priority must be one of: ${VALID_PRIORITIES.join(', ')}`);
+    else values.priority = body.priority;
+  }
+
+  if (body.assignee !== undefined) {
+    if (body.assignee === null || body.assignee === '') {
+      values.assignee = null; // unassign
+    } else if (!isObjectId(body.assignee)) {
+      errors.push('Invalid assignee');
+    } else if (!isWorkspaceMember(workspace, body.assignee)) {
+      // FIX: you could assign a task to a user who isn't in the workspace.
+      errors.push('Assignee must be a member of this workspace');
+    } else {
+      values.assignee = body.assignee;
+    }
+  }
+
+  if (body.dueDate !== undefined) {
+    if (body.dueDate === null || body.dueDate === '') {
+      values.dueDate = null;
+    } else {
+      // FIX: the date picker sends "YYYY-MM-DD", which JS parses as UTC MIDNIGHT.
+      // Users west of UTC (e.g. the US) then saw the task due the DAY BEFORE
+      // (calendar, overdue badge). Store plain dates at 12:00 UTC so the same
+      // calendar day shows in every timezone from UTC-11 to UTC+11.
+      const raw = typeof body.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.dueDate)
+        ? `${body.dueDate}T12:00:00.000Z`
+        : body.dueDate;
+      const d = new Date(raw);
+      if (Number.isNaN(d.getTime())) errors.push('Invalid due date');
+      else values.dueDate = d;
+    }
+  }
+
+  if (body.tags !== undefined) {
+    if (!Array.isArray(body.tags)) errors.push('Tags must be an array');
+    else {
+      const tags = [...new Set(body.tags.filter((t) => typeof t === 'string').map((t) => t.trim()).filter(Boolean))];
+      if (tags.length > 20 || tags.some((t) => t.length > 30)) errors.push('Max 20 tags, 30 characters each');
+      else values.tags = tags;
+    }
+  }
+
+  return { errors, values };
+}
 
 // ================= CREATE TASK =================
 exports.createTask = async (req, res) => {
   try {
-    const {
-      title,
-      description,
-      status = 'todo',
-      priority = 'medium',
-      assignee,
-      dueDate,
-      tags
-    } = req.body;
+    const { errors, values } = parseTaskFields(req.body || {}, req.workspace);
+    if (!values.title && !errors.length) errors.push('Title is required');
+    if (errors.length) return res.status(400).json({ success: false, message: errors[0] });
 
     const workspaceId = req.workspace._id;
     const userId = req.userId;
-
-    if (!title) {
-      return res.status(400).json({ message: 'Title and workspace are required' });
-    }
+    const status = values.status || 'todo';
 
     const tasksInColumn = await Task.find({ workspace: workspaceId, status })
       .sort({ order: -1 })
@@ -41,28 +120,34 @@ exports.createTask = async (req, res) => {
       : 0;
 
     const task = await Task.create({
-      title,
-      description,
+      title: values.title,
+      description: values.description,
       status,
-      priority,
+      priority: values.priority || 'medium',
       workspace: workspaceId,
-      assignee: assignee || undefined,
+      assignee: values.assignee || undefined,
       creator: userId,
-      dueDate: dueDate || undefined,
-      tags: tags || [],
-      order
+      dueDate: values.dueDate || undefined,
+      tags: values.tags || [],
+      order,
     });
 
-    await task.populate([
-      { path: 'creator', select: 'name email' },
-      { path: 'assignee', select: 'name email' }
-    ]);
+    await task.populate(POPULATE);
+
+    // Tell the assignee (the model/enum for this existed but was never used).
+    if (values.assignee) {
+      await createNotification({
+        recipient: values.assignee, sender: userId, workspace: workspaceId,
+        task: task._id, type: 'TASK_ASSIGNED',
+      });
+    }
+
+    // Live update for everyone else in the workspace (skip the creator's tab).
+    emitToWorkspace(workspaceId, 'task:created', { task: toPlain(task) }, socketIdFromReq(req));
 
     res.status(201).json({ success: true, message: 'Task created successfully', task });
-
   } catch (error) {
-    console.error('Create task error:', error);
-    res.status(500).json({ message: error.message });
+    sendError(res, error, 'Create task');
   }
 };
 
@@ -80,31 +165,22 @@ exports.getWorkspaceTasks = async (req, res) => {
     const groupedTasks = {
       todo:          tasks.filter(t => t.status === 'todo'),
       'in-progress': tasks.filter(t => t.status === 'in-progress'),
-      done:          tasks.filter(t => t.status === 'done')
+      done:          tasks.filter(t => t.status === 'done'),
     };
 
     res.json({ success: true, tasks: groupedTasks });
-
   } catch (error) {
-    console.error('Get tasks error:', error);
-    res.status(500).json({ message: error.message });
+    sendError(res, error, 'Get tasks');
   }
 };
 
 // ================= GET SINGLE TASK =================
 exports.getTask = async (req, res) => {
   try {
-    await req.task.populate([
-      { path: 'creator', select: 'name email' },
-      { path: 'assignee', select: 'name email' },
-      { path: 'comments.user', select: 'name email' }
-    ]);
-
+    await req.task.populate(POPULATE);
     res.json({ success: true, task: req.task });
-
   } catch (error) {
-    console.error('Get task error:', error);
-    res.status(500).json({ message: error.message });
+    sendError(res, error, 'Get task');
   }
 };
 
@@ -112,26 +188,68 @@ exports.getTask = async (req, res) => {
 exports.updateTask = async (req, res) => {
   try {
     const task = req.task;
-    const updates = req.body;
+    const { errors, values } = parseTaskFields(req.body || {}, req.workspace);
+    if (errors.length) return res.status(400).json({ success: false, message: errors[0] });
 
-    const allowedFields = ['title', 'description', 'status', 'priority', 'assignee', 'dueDate', 'tags'];
-    allowedFields.forEach(field => {
-      if (updates[field] !== undefined) {
-        task[field] = updates[field];
+    const oldAssignee = task.assignee ? task.assignee.toString() : null;
+    const oldStatus = task.status;
+    const oldOrder = task.order;
+
+    const statusChanged = values.status !== undefined && values.status !== oldStatus;
+
+    const apply = async (session) => {
+      for (const field of ['title', 'description', 'priority', 'assignee', 'dueDate', 'tags']) {
+        if (values[field] !== undefined) task[field] = values[field] === null ? undefined : values[field];
       }
-    });
 
-    await task.save();
-    await task.populate([
-      { path: 'creator', select: 'name email' },
-      { path: 'assignee', select: 'name email' }
-    ]);
+      if (statusChanged) {
+        // FIX: changing status via PUT used to keep the OLD `order`, leaving a
+        // gap in the source column and a duplicate order in the destination.
+        // Treat it as a move to the end of the destination column.
+        const destCount = await Task.countDocuments({
+          workspace: task.workspace, status: values.status, _id: { $ne: task._id },
+        });
+        const ops = buildReorderOperations({
+          workspaceId: task.workspace, taskId: task._id,
+          oldStatus, oldOrder: oldOrder ?? 0, newStatus: values.status, newOrder: destCount,
+        });
+        if (ops.length) await Task.bulkWrite(ops, sessionOpts(session));
+        task.status = values.status;
+        task.order = destCount;
+      }
+
+      await task.save(sessionOpts(session));
+    };
+
+    if (statusChanged) await runInOptionalTransaction(apply);
+    else await apply(null);
+
+    await task.populate(POPULATE);
+
+    // Assignment notifications
+    const newAssignee = task.assignee ? (task.assignee._id || task.assignee).toString() : null;
+    if (newAssignee !== oldAssignee) {
+      if (newAssignee) {
+        await createNotification({
+          recipient: newAssignee, sender: req.userId, workspace: task.workspace,
+          task: task._id, type: 'TASK_ASSIGNED',
+        });
+      }
+      if (oldAssignee) {
+        await createNotification({
+          recipient: oldAssignee, sender: req.userId, workspace: task.workspace,
+          task: task._id, type: 'TASK_UNASSIGNED',
+        });
+      }
+    }
+
+    // FIX: REST edits (title/priority/assignee/…) were never broadcast, so other
+    // users saw stale data until they refreshed.
+    emitToWorkspace(task.workspace, 'task:updated', { task: toPlain(task) }, socketIdFromReq(req));
 
     res.json({ success: true, message: 'Task updated successfully', task });
-
   } catch (error) {
-    console.error('Update task error:', error);
-    res.status(500).json({ message: error.message });
+    sendError(res, error, 'Update task');
   }
 };
 
@@ -147,133 +265,132 @@ exports.deleteTask = async (req, res) => {
 
     if (!isCreator && !isAdmin) {
       return res.status(403).json({
-        message: 'Only workspace owner, admin, or task creator can delete this task'
+        success: false,
+        message: 'Only workspace owner, admin, or task creator can delete this task',
       });
     }
 
     await Task.findByIdAndDelete(task._id);
 
-    res.json({ success: true, message: 'Task deleted successfully' });
+    // Close the gap this task left in its column, and drop notifications that
+    // pointed at it (they would otherwise reference a deleted task forever).
+    await Task.updateMany(
+      { workspace: task.workspace, status: task.status, order: { $gt: task.order ?? 0 } },
+      { $inc: { order: -1 } }
+    );
+    await Notification.deleteMany({ task: task._id });
 
+    // FIX: delete was never visible live — the old flow was REST delete, THEN a
+    // client socket event whose handler couldn't find the (already deleted)
+    // task and returned silently. The server broadcasts it itself now.
+    emitToWorkspace(task.workspace, 'task:deleted', { taskId: task._id.toString() }, socketIdFromReq(req));
+
+    res.json({ success: true, message: 'Task deleted successfully' });
   } catch (error) {
-    console.error('Delete task error:', error);
-    res.status(500).json({ message: error.message });
+    sendError(res, error, 'Delete task');
   }
 };
 
 // ================= MOVE TASK =================
-// FIX: previously this only ever incremented order in the *destination*
-// column and never renumbered the *source* column, so dragging a task out
-// of a column left a permanent gap in that column's order sequence (and
-// cross-column moves plus concurrent drags could desync order entirely
-// since nothing here was transactional). This now:
-//   1. Validates newStatus/newOrder.
-//   2. Computes the full set of shifts needed (source column close-gap +
-//      destination column make-room, or same-column shift) via the pure,
-//      unit-tested buildReorderOperations().
-//   3. Applies the shifts + the task's own update inside a single
-//      transaction, so a crash mid-move can't leave orders inconsistent.
 exports.moveTask = async (req, res) => {
-  const { newStatus, newOrder } = req.body;
+  const { newStatus, newOrder } = req.body || {};
 
   if (!VALID_STATUSES.includes(newStatus)) {
     return res.status(400).json({ message: `newStatus must be one of: ${VALID_STATUSES.join(', ')}` });
   }
-  if (typeof newOrder !== 'number' || !Number.isFinite(newOrder) || newOrder < 0) {
-    return res.status(400).json({ message: 'newOrder must be a non-negative number' });
+  if (!Number.isInteger(newOrder) || newOrder < 0) {
+    return res.status(400).json({ message: 'newOrder must be a non-negative integer' });
   }
 
   const task = req.task;
   const oldStatus = task.status;
-  const oldOrder = task.order;
+  const oldOrder = task.order ?? 0;
 
-  const session = await mongoose.startSession();
   try {
-    session.startTransaction();
+    // FIX: clamp to the column length. A huge newOrder used to be stored as-is
+    // and left permanent gaps in the order sequence.
+    const othersInDest = await Task.countDocuments({
+      workspace: task.workspace, status: newStatus, _id: { $ne: task._id },
+    });
+    const finalOrder = Math.min(newOrder, othersInDest);
 
-    const ops = buildReorderOperations({
-      workspaceId: task.workspace,
-      taskId: task._id,
-      oldStatus,
-      oldOrder,
-      newStatus,
-      newOrder
+    await runInOptionalTransaction(async (session) => {
+      const ops = buildReorderOperations({
+        workspaceId: task.workspace, taskId: task._id,
+        oldStatus, oldOrder, newStatus, newOrder: finalOrder,
+      });
+      if (ops.length > 0) await Task.bulkWrite(ops, sessionOpts(session));
+
+      task.status = newStatus;
+      task.order = finalOrder;
+      await task.save(sessionOpts(session));
     });
 
-    if (ops.length > 0) {
-      await Task.bulkWrite(ops, { session });
-    }
+    await task.populate(POPULATE);
 
-    task.status = newStatus;
-    task.order = newOrder;
-    await task.save({ session });
-
-    await session.commitTransaction();
-
-    await task.populate([
-      { path: 'creator', select: 'name email' },
-      { path: 'assignee', select: 'name email' }
-    ]);
+    // Full task + the target index, so other clients can place it correctly
+    // (the old payload had no order, so remote users saw it jump to the TOP).
+    // oldStatus is read BEFORE the change — the old `oldStatus || task.status`
+    // fallback evaluated after the change and always returned the new status.
+    emitToWorkspace(
+      task.workspace,
+      'task:moved',
+      { taskId: task._id.toString(), newStatus, oldStatus, newOrder: finalOrder, task: toPlain(task) },
+      socketIdFromReq(req)
+    );
 
     res.json({ success: true, message: 'Task moved successfully', task });
-
   } catch (error) {
-    await session.abortTransaction().catch(() => {});
-    console.error('Move task error:', error);
-
-    // Transactions require MongoDB to be running as a replica set (Atlas
-    // clusters are by default; a bare local `mongod` is not). Surface that
-    // clearly instead of a generic 500 during dev.
-    if (error.message && error.message.includes('Transaction numbers')) {
-      return res.status(500).json({
-        message: 'Move failed: this MongoDB instance is not configured as a replica set, so transactions are unavailable. Use MongoDB Atlas or run mongod with --replSet locally.'
-      });
-    }
-
-    res.status(500).json({ message: error.message });
-  } finally {
-    session.endSession();
+    sendError(res, error, 'Move task');
   }
 };
 
 // ================= ADD COMMENT =================
 exports.addComment = async (req, res) => {
   try {
-    const { text, mentions = [] } = req.body;
+    const { text } = req.body || {};
     const userId = req.userId;
     const task = req.task;
 
-    if (!text || !text.trim()) {
-      return res.status(400).json({ message: 'Comment text is required' });
+    if (typeof text !== 'string' || !text.trim()) {
+      return res.status(400).json({ success: false, message: 'Comment text is required' });
+    }
+    if (text.length > 1000) {
+      return res.status(400).json({ success: false, message: 'Comment must be at most 1000 characters' });
     }
 
-    task.comments.push({ user: userId, text, mentions });
+    // FIX: mentions came straight from the client. Anyone could "mention" any
+    // user id — including people outside the workspace — and that person would
+    // get a notification containing this task's title (cross-workspace leak).
+    // Keep only valid, unique ids of actual workspace members.
+    const mentions = uniqueObjectIds(req.body.mentions).filter((id) => isWorkspaceMember(req.workspace, id));
+
+    task.comments.push({ user: userId, text: text.trim(), mentions });
     await task.save();
     await task.populate('comments.user', 'name email');
 
-    if (mentions && mentions.length > 0) {
-      await Promise.all(
-        mentions.map(mentionUserId =>
-          createNotification({
-            recipient: mentionUserId,
-            sender: userId,
-            workspace: task.workspace,
-            task: task._id,
-            type: 'TASK_MENTIONED',
-          })
-        )
-      );
-    }
+    const comment = task.comments.at(-1);
 
-    res.json({
-      success: true,
-      message: 'Comment added',
-      comment: task.comments.at(-1)
-    });
+    await Promise.all(
+      mentions.map((mentionUserId) =>
+        createNotification({
+          recipient: mentionUserId, sender: userId, workspace: task.workspace,
+          task: task._id, type: 'TASK_MENTIONED',
+        })
+      )
+    );
 
+    // Server broadcasts the saved comment (clients can no longer inject one).
+    emitToWorkspace(
+      task.workspace,
+      'comment:added',
+      { taskId: task._id.toString(), comment: toPlain(comment), addedBy: comment.user?.name },
+      socketIdFromReq(req)
+    );
+
+    res.json({ success: true, message: 'Comment added', comment });
   } catch (error) {
-    console.error('Add comment error:', error);
-    res.status(500).json({ message: error.message });
+    sendError(res, error, 'Add comment');
   }
 };
 
@@ -285,20 +402,25 @@ exports.deleteComment = async (req, res) => {
     const task = req.task;
     const member = req.workspaceMember;
 
-    const comment = task.comments.id(commentId);
-    if (!comment) return res.status(404).json({ message: 'Comment not found' });
+    const comment = isObjectId(commentId) ? task.comments.id(commentId) : null;
+    if (!comment) return res.status(404).json({ success: false, message: 'Comment not found' });
 
     if (comment.user.toString() !== userId && !['admin', 'owner'].includes(member.role)) {
-      return res.status(403).json({ message: 'Not authorized' });
+      return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
     task.comments.pull(commentId);
     await task.save();
 
-    res.json({ success: true, message: 'Comment deleted' });
+    emitToWorkspace(
+      task.workspace,
+      'comment:deleted',
+      { taskId: task._id.toString(), commentId },
+      socketIdFromReq(req)
+    );
 
+    res.json({ success: true, message: 'Comment deleted' });
   } catch (error) {
-    console.error('Delete comment error:', error);
-    res.status(500).json({ message: error.message });
+    sendError(res, error, 'Delete comment');
   }
 };

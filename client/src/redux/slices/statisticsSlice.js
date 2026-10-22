@@ -73,13 +73,15 @@ const statisticsSlice = createSlice({
       const assigneeMap = {};
       allTasks.forEach(task => {
         if (task.assignee) {
+          // FIX: key by id, not name — two members called "Rahul" were merged into one row.
+          const key = task.assignee._id || task.assignee.name;
           const name = task.assignee.name;
-          if (!assigneeMap[name]) {
-            assigneeMap[name] = { name, count: 0, completed: 0 };
+          if (!assigneeMap[key]) {
+            assigneeMap[key] = { name, count: 0, completed: 0 };
           }
-          assigneeMap[name].count++;
+          assigneeMap[key].count++;
           if (task.status === 'done') {
-            assigneeMap[name].completed++;
+            assigneeMap[key].completed++;
           }
         } else {
           if (!assigneeMap['Unassigned']) {

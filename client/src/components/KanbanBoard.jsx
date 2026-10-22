@@ -1,5 +1,4 @@
 
-import { useWorkspaceSocket } from '../hooks/useWorkspaceSocket';
 import { useEffect, useState, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -8,7 +7,7 @@ import {
   useSensor, useSensors,
 } from '@dnd-kit/core';
 import {
-  fetchTasks, optimisticMoveTask, moveTask,
+  optimisticMoveTask, moveTask,
   rollbackMoveTask, setSelectedTask, deleteTask, addComment,
 } from '../redux/slices/taskSlice';
 import { calculateStatistics } from '../redux/slices/statisticsSlice';
@@ -101,7 +100,9 @@ export default function KanbanBoard({
   }, []);
   const { currentWorkspace } = useSelector(s => s.workspace);
   const workspaceId = currentWorkspace?._id;
-  const { socket, isConnected } = useWorkspaceSocket(workspaceId);
+  // NOTE: no socket hook here. Live updates are wired ONCE in Dashboard; calling it
+  // here too doubled every handler and made leaving the Board tab emit
+  // workspace:leave (silently stopping live updates).
   const { tasks, selectedTask, isLoading } = useSelector(s => s.tasks);
   const statistics = useSelector(s => s.statistics);
 
@@ -132,9 +133,10 @@ export default function KanbanBoard({
     useSensor(KeyboardSensor)
   );
 
-  useEffect(() => {
-    if (currentWorkspace?._id) dispatch(fetchTasks(currentWorkspace._id));
-  }, [currentWorkspace, dispatch]);
+  // NOTE: tasks are fetched in Dashboard (once per workspace id). Fetching here
+  // meant (a) nothing was fetched when you switched workspace while on the
+  // Statistics/Members/Calendar tab (stale tasks of the OLD workspace), and
+  // (b) every members/role change (new currentWorkspace object) refetched the board.
 
   useEffect(() => {
     dispatch(calculateStatistics(tasks));
@@ -199,13 +201,12 @@ export default function KanbanBoard({
     dispatch(moveTask({ taskId, newStatus: dstStatus, newOrder: dstIdx })).then(res => {
       if (res.type.includes('fulfilled')) {
         toast.success('Moved!', { id: taskId });
-        if (socket && isConnected) socket.emit('task:move', { workspaceId, taskId, newStatus: dstStatus, oldStatus: srcStatus, newOrder: dstIdx });
       } else {
         toast.error('Move failed', { id: taskId });
         dispatch(rollbackMoveTask({ taskId, sourceStatus: srcStatus, destinationStatus: dstStatus, sourceIndex: srcIdx }));
       }
     });
-  }, [tasks, dispatch, socket, isConnected, workspaceId]);
+  }, [tasks, dispatch]);
 
   const handleTaskClick  = useCallback(task => dispatch(setSelectedTask(task)), [dispatch]);
   const handleAddTask    = useCallback(status => { setCreateModalStatus(status); setShowCreateModal(true); }, []);
@@ -213,19 +214,17 @@ export default function KanbanBoard({
     const id = toast.loading('Deleting…');
     const result = await dispatch(deleteTask(taskId));
     if (result.type === 'tasks/delete/fulfilled') {
-      if (socket && isConnected) socket.emit('task:delete', { workspaceId, taskId });
       toast.success('Task deleted', { id });
     } else toast.error('Delete failed', { id });
-  }, [dispatch, socket, isConnected, workspaceId]);
+  }, [dispatch]);
 
   const handleAddComment = useCallback(async (taskId, commentText, mentions = []) => {
     const id = toast.loading('Adding comment…');
     const result = await dispatch(addComment({ taskId, text: commentText, mentions }));
     if (result.type === 'tasks/addComment/fulfilled') {
       toast.success('Comment added', { id });
-      if (socket && isConnected) socket.emit('comment:add', { workspaceId, taskId, comment: result.payload.comment });
     } else toast.error('Failed to add comment', { id });
-  }, [dispatch, socket, isConnected, workspaceId]);
+  }, [dispatch]);
 
   const completionRate = statistics.completionRate || 0;
   const donutData = useMemo(() => [

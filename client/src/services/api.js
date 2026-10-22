@@ -1,5 +1,6 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { getSocketId } from '../utils/socketId';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
@@ -7,8 +8,16 @@ const api = axios.create({
   timeout: 10000
 });
 
+// Only these methods are safe to repeat automatically.
+const RETRYABLE_METHODS = ['get', 'head', 'options'];
+
 api.interceptors.request.use(
-  (config) => config,
+  (config) => {
+    // Lets the server exclude this tab from the live broadcast of its own change.
+    const socketId = getSocketId();
+    if (socketId) config.headers['X-Socket-Id'] = socketId;
+    return config;
+  },
   (error) => Promise.reject(error)
 );
 
@@ -17,9 +26,13 @@ api.interceptors.response.use(
   async (error) => {
     const config = error.config;
 
-    // ── Network error ────────────────────────────────────────────────────────
+    // ── Network error / timeout ───────────────────────────────────────────────
     if (!error.response) {
-      if (config && (config.__retryCount || 0) < 2) {
+      // FIX: this used to retry EVERY request, including POST. A timed-out POST
+      // may already have been processed by the server, so retrying it created
+      // duplicate tasks / comments / workspaces. Only idempotent reads retry now.
+      const method = (config?.method || 'get').toLowerCase();
+      if (config && RETRYABLE_METHODS.includes(method) && (config.__retryCount || 0) < 2) {
         config.__retryCount = (config.__retryCount || 0) + 1;
         const delay = Math.pow(2, config.__retryCount) * 1000;
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -29,18 +42,19 @@ api.interceptors.response.use(
         id: 'network-error',
         duration: 5000
       });
-      return Promise.reject(new Error('Network error'));
+      return Promise.reject(error);
     }
 
     const status  = error.response.status;
     const message = error.response.data?.message;
 
-    // FIX: The /auth/me (checkAuth) call on app load returns 401 when the user
-    // is simply not logged in yet — this is expected, not an error worth toasting.
-    // Without this check, every page load for a logged-out user showed
-    // "Session expired. Please login again." even on first visit.
-    // We suppress the toast and force-logout logic for the checkAuth route only.
-    const isCheckAuthCall = config?.url?.includes('/auth/me');
+    // 401 on these routes is EXPECTED and must not be treated as "session expired":
+    //  - /auth/me     : user simply isn't logged in yet
+    //  - /auth/login, /auth/signup : wrong credentials. FIX: before, a wrong
+    //    password showed "Session expired", fired force-logout and hard-reloaded
+    //    the page to /login (wiping what the user had typed).
+    const url = config?.url || '';
+    const isAuthCall = ['/auth/me', '/auth/login', '/auth/signup'].some((p) => url.includes(p));
 
     switch (status) {
       case 400:
@@ -48,8 +62,7 @@ api.interceptors.response.use(
         break;
 
       case 401:
-        if (!isCheckAuthCall) {
-          // Real 401 — user was logged in but session expired mid-session
+        if (!isAuthCall) {
           toast.error('Session expired. Please login again.', { id: 'error-401' });
           window.dispatchEvent(new Event('force-logout'));
           if (!window.__isRedirecting) {
@@ -60,16 +73,20 @@ api.interceptors.response.use(
             }, 500);
           }
         }
-        // If it IS checkAuth, stay silent — App.jsx spinner → authSlice.rejected
-        // → isLoading = false → isAuthenticated = false → routes render → /login
+        // Auth calls: stay silent here — the thunk's rejectWithValue shows the
+        // server message ("Invalid email or password") in the form.
         break;
 
       case 403:
-        toast.error("You don't have permission to perform this action", { id: 'error-403' });
+        toast.error(message || "You don't have permission to perform this action", { id: 'error-403' });
         break;
 
       case 404:
         toast.error(message || 'Resource not found', { id: 'error-404' });
+        break;
+
+      case 429:
+        toast.error(message || 'Too many requests. Please slow down.', { id: 'error-429' });
         break;
 
       case 500:

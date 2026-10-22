@@ -97,6 +97,9 @@ const notificationSlice = createSlice({
   reducers: {
     // Called from the Socket.IO listener hook when a new notification arrives
     addNotification: (state, action) => {
+      // FIX: ignore duplicates (a socket re-delivery would otherwise add the same
+      // notification twice and inflate the unread badge).
+      if (state.list.some((n) => n._id === action.payload._id)) return;
       state.list.unshift(action.payload); // Add to the top
       state.unreadCount += 1;
     },

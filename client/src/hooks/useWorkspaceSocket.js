@@ -1,212 +1,112 @@
-// import { useEffect } from 'react';
-// import { useDispatch } from 'react-redux';
-// import { useSocket } from './Usesocket';
-// import {
-//   addTaskFromSocket,
-//   updateTaskFromSocket,
-//   deleteTaskFromSocket,
-//   addCommentFromSocket
-// } from '../redux/slices/taskSlice';
-
-// /**
-//  * useWorkspaceSocket Hook
-//  * 
-//  * Listens for real-time workspace events via Socket.IO
-//  * Updates Redux store for tasks, comments, and user presence
-//  */
-// export const useWorkspaceSocket = (workspaceId) => {
-//   const dispatch = useDispatch();
-//   const { socket, isConnected } = useSocket();
-
-//   useEffect(() => {
-//     if (!socket || !workspaceId) return;
-
-//     console.log(`🔌 Joining workspace: ${workspaceId}`);
-//     socket.emit('workspace:join', workspaceId);
-
-//     // ===== TASK EVENTS =====
-    
-//     // Task created by another user
-//     const handleTaskCreated = (data) => {
-//       console.log('✨ Task created:', data.task.title);
-//       dispatch(addTaskFromSocket(data.task));
-//     };
-
-//     // Task updated by another user
-//     const handleTaskUpdated = (data) => {
-//       console.log('🔄 Task updated:', data.taskId);
-//       dispatch(updateTaskFromSocket(data.updates));
-//     };
-
-//     // Task moved by another user
-//     const handleTaskMoved = (data) => {
-//       console.log('📦 Task moved:', data.taskId, 'to', data.newStatus);
-//       // Task move is handled by the drag-and-drop system
-//       // You might want to refresh or show a notification here
-//     };
-
-//     // Task deleted by another user
-//     const handleTaskDeleted = (data) => {
-//       console.log('🗑️ Task deleted:', data.taskId);
-//       dispatch(deleteTaskFromSocket(data.taskId));
-//     };
-
-//     // ===== COMMENT EVENTS =====
-    
-//     // ✅ Comment added by another user (real-time update)
-//     const handleCommentAdded = (data) => {
-//       console.log('💬 Comment added to task:', data.taskId);
-//       dispatch(addCommentFromSocket({
-//         taskId: data.taskId,
-//         comment: data.comment
-//       }));
-//     };
-
-//     // Comment typing indicator
-//     const handleCommentTyping = (data) => {
-//       console.log('✍️ User typing:', data.userName);
-//       // You can show a typing indicator in the UI
-//     };
-
-//     // ===== USER PRESENCE =====
-    
-//     const handleUserJoined = (data) => {
-//       console.log('👋 User joined:', data.userName);
-//     };
-
-//     const handleUserLeft = (data) => {
-//       console.log('👋 User left:', data.userName);
-//     };
-
-//     const handleOnlineUsers = (users) => {
-//       console.log('👥 Online users:', users.length);
-//     };
-
-//     // ===== REGISTER EVENT LISTENERS =====
-    
-//     socket.on('task:created', handleTaskCreated);
-//     socket.on('task:updated', handleTaskUpdated);
-//     socket.on('task:moved', handleTaskMoved);
-//     socket.on('task:deleted', handleTaskDeleted);
-//     socket.on('comment:added', handleCommentAdded);  // ✅ Listen for comments
-//     socket.on('comment:typing', handleCommentTyping);
-//     socket.on('user:joined', handleUserJoined);
-//     socket.on('user:left', handleUserLeft);
-//     socket.on('workspace:online-users', handleOnlineUsers);
-
-//     // ===== CLEANUP =====
-    
-//     return () => {
-//       console.log(`🔌 Leaving workspace: ${workspaceId}`);
-      
-//       socket.emit('workspace:leave', workspaceId);
-      
-//       socket.off('task:created', handleTaskCreated);
-//       socket.off('task:updated', handleTaskUpdated);
-//       socket.off('task:moved', handleTaskMoved);
-//       socket.off('task:deleted', handleTaskDeleted);
-//       socket.off('comment:added', handleCommentAdded);
-//       socket.off('comment:typing', handleCommentTyping);
-//       socket.off('user:joined', handleUserJoined);
-//       socket.off('user:left', handleUserLeft);
-//       socket.off('workspace:online-users', handleOnlineUsers);
-//     };
-//   }, [socket, workspaceId, dispatch]);
-
-//   return { socket, isConnected };
-// };
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
+import toast from 'react-hot-toast';
 import { useSocket } from './Usesocket';
 import {
+  fetchTasks,
   addTaskFromSocket,
   updateTaskFromSocket,
+  moveTaskFromSocket,
   deleteTaskFromSocket,
   addCommentFromSocket,
+  deleteCommentFromSocket,
 } from '../redux/slices/taskSlice';
+import { fetchWorkspaces } from '../redux/slices/workspaceSlice';
 
+/**
+ * Live workspace updates.
+ *
+ * IMPORTANT: call this hook ONCE (it is in Dashboard). It used to be called in
+ * both Dashboard and KanbanBoard, so every event was handled twice, and leaving
+ * the Board tab ran KanbanBoard's cleanup → `workspace:leave` → the user was
+ * silently removed from the room and stopped receiving live updates.
+ *
+ * The client no longer emits task/comment events: writes go through REST and
+ * the server broadcasts to the other tabs/users after saving.
+ */
 export const useWorkspaceSocket = (workspaceId) => {
   const dispatch = useDispatch();
-  const { socket, isConnected } = useSocket();
+  const { socket, isConnected, setOnlineUsers } = useSocket();
 
   useEffect(() => {
     if (!socket || !workspaceId) return;
 
-    socket.emit('workspace:join', workspaceId);
-
-    // ── Task created by another user ────────────────────────────────────────
-    const handleTaskCreated = (data) => {
-      dispatch(addTaskFromSocket(data.task));
+    // FIX: after a network drop Socket.IO reconnects with a NEW socket id and
+    // the server has forgotten every room, so the old code (which joined only
+    // once, when the effect ran) never received events again. Join on every
+    // (re)connect, and refetch tasks after a RE-connect to catch missed events.
+    let firstJoin = true;
+    const join = () => {
+      socket.emit('workspace:join', workspaceId);
+      if (!firstJoin) dispatch(fetchTasks(workspaceId));
+      firstJoin = false;
     };
 
-    // ── Task updated by another user ────────────────────────────────────────
-    // ✅ FIX: Server now emits { task: fullTaskObject, updatedBy }
-    //         Old code expected { taskId, updates } — reducer couldn't match _id
-    const handleTaskUpdated = (data) => {
-      if (data.task) {
-        // New format: full task object
-        dispatch(updateTaskFromSocket(data.task));
-      } else if (data.updates && data.updates._id) {
-        // Fallback: if old format still arrives
-        dispatch(updateTaskFromSocket(data.updates));
-      }
-    };
+    if (socket.connected) join();
+    socket.on('connect', join);
 
-    // ── Task moved by another user ──────────────────────────────────────────
-    // ✅ FIX: task:moved only sends { taskId, newStatus, oldStatus }
-    //         We MUST NOT pass this partial object to updateTaskFromSocket
-    //         because the reducer does:  state.tasks[status][index] = updatedTask
-    //         which would wipe title, assignee, priority, tags etc.
-    //
-    //         Correct approach: find the existing task in Redux state and only
-    //         patch its status field — handled inside the reducer via _partialMove flag.
-    const handleTaskMoved = (data) => {
-      dispatch(updateTaskFromSocket({
-        _id:           data.taskId,
-        status:        data.newStatus,
-        _partialMove:  true,   // signals reducer to PATCH only, not replace
-      }));
+    // ── Tasks (events are sent by the server after REST writes) ──────────────
+    const handleTaskCreated = (data) => { if (data?.task) dispatch(addTaskFromSocket(data.task)); };
+    const handleTaskUpdated = (data) => { if (data?.task) dispatch(updateTaskFromSocket(data.task)); };
+    const handleTaskMoved   = (data) => {
+      if (data?.task) dispatch(moveTaskFromSocket({ task: data.task, newOrder: data.newOrder }));
     };
+    const handleTaskDeleted = (data) => { if (data?.taskId) dispatch(deleteTaskFromSocket(data.taskId)); };
 
-    // ── Task deleted by another user ────────────────────────────────────────
-    const handleTaskDeleted = (data) => {
-      dispatch(deleteTaskFromSocket(data.taskId));
-    };
-
-    // ── Comment added by another user ───────────────────────────────────────
+    // ── Comments ─────────────────────────────────────────────────────────────
     const handleCommentAdded = (data) => {
-      dispatch(addCommentFromSocket({
-        taskId:  data.taskId,
-        comment: data.comment,
-      }));
+      if (data?.comment) dispatch(addCommentFromSocket({ taskId: data.taskId, comment: data.comment }));
+    };
+    const handleCommentDeleted = (data) => {
+      if (data?.commentId) dispatch(deleteCommentFromSocket({ taskId: data.taskId, commentId: data.commentId }));
     };
 
-    // ── Presence ────────────────────────────────────────────────────────────
-    const handleUserJoined  = (data) => console.log('👋 User joined:', data.userName);
-    const handleUserLeft    = (data) => console.log('👋 User left:',   data.userName);
-    const handleOnlineUsers = (users) => console.log('👥 Online:', users.length);
+    // ── Presence (kept in SocketContext; UI can read onlineUsers) ────────────
+    const handleOnlineUsers = (users) => setOnlineUsers(Array.isArray(users) ? users : []);
+    const handleUserJoined = (user) =>
+      setOnlineUsers((prev) => (prev.some((u) => u.userId === user.userId) ? prev : [...prev, user]));
+    const handleUserLeft = (user) =>
+      setOnlineUsers((prev) => prev.filter((u) => u.userId !== user.userId));
 
-    socket.on('task:created',          handleTaskCreated);
-    socket.on('task:updated',          handleTaskUpdated);
-    socket.on('task:moved',            handleTaskMoved);
-    socket.on('task:deleted',          handleTaskDeleted);
-    socket.on('comment:added',         handleCommentAdded);
-    socket.on('user:joined',           handleUserJoined);
-    socket.on('user:left',             handleUserLeft);
-    socket.on('workspace:online-users',handleOnlineUsers);
+    // ── Membership changes ───────────────────────────────────────────────────
+    const handleRemoved = () => {
+      toast.error('You no longer have access to this workspace');
+      dispatch(fetchWorkspaces());
+    };
+    const handleWorkspaceDeleted = () => {
+      toast('This workspace was deleted');
+      dispatch(fetchWorkspaces());
+    };
+
+    socket.on('task:created',           handleTaskCreated);
+    socket.on('task:updated',           handleTaskUpdated);
+    socket.on('task:moved',             handleTaskMoved);
+    socket.on('task:deleted',           handleTaskDeleted);
+    socket.on('comment:added',          handleCommentAdded);
+    socket.on('comment:deleted',        handleCommentDeleted);
+    socket.on('user:joined',            handleUserJoined);
+    socket.on('user:left',              handleUserLeft);
+    socket.on('workspace:online-users', handleOnlineUsers);
+    socket.on('workspace:removed',      handleRemoved);
+    socket.on('workspace:deleted',      handleWorkspaceDeleted);
 
     return () => {
       socket.emit('workspace:leave', workspaceId);
-      socket.off('task:created',          handleTaskCreated);
-      socket.off('task:updated',          handleTaskUpdated);
-      socket.off('task:moved',            handleTaskMoved);
-      socket.off('task:deleted',          handleTaskDeleted);
-      socket.off('comment:added',         handleCommentAdded);
-      socket.off('user:joined',           handleUserJoined);
-      socket.off('user:left',             handleUserLeft);
-      socket.off('workspace:online-users',handleOnlineUsers);
+      socket.off('connect', join);
+      socket.off('task:created',           handleTaskCreated);
+      socket.off('task:updated',           handleTaskUpdated);
+      socket.off('task:moved',             handleTaskMoved);
+      socket.off('task:deleted',           handleTaskDeleted);
+      socket.off('comment:added',          handleCommentAdded);
+      socket.off('comment:deleted',        handleCommentDeleted);
+      socket.off('user:joined',            handleUserJoined);
+      socket.off('user:left',              handleUserLeft);
+      socket.off('workspace:online-users', handleOnlineUsers);
+      socket.off('workspace:removed',      handleRemoved);
+      socket.off('workspace:deleted',      handleWorkspaceDeleted);
+      setOnlineUsers([]);
     };
-  }, [socket, workspaceId, dispatch]);
+  }, [socket, workspaceId, dispatch, setOnlineUsers]);
 
   return { socket, isConnected };
 };

@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, lazy, Suspense, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { setSelectedTask } from '../redux/slices/taskSlice';
+import toast from 'react-hot-toast';
+import { setSelectedTask, addComment } from '../redux/slices/taskSlice';
 import {
   ChevronLeft, ChevronRight, CalendarDays, CalendarCheck,
   Plus, AlertTriangle, Circle, Zap, CheckCircle2, Clock,
@@ -321,7 +322,7 @@ export default function CalendarView() {
 
       <Suspense fallback={null}>
         {showCreate&&(<CreateTaskModal initialStatus="todo" initialDueDate={createDate?createDate.toISOString().split('T')[0]:undefined} onClose={()=>{setShowCreate(false);setCreateDate(null);}}/>)}
-        {selectedTask&&(<TaskDetailModal task={selectedTask} onClose={()=>dispatch(setSelectedTask(null))} onAddComment={()=>{}} workspaceMembers={currentWorkspace?.members?.map(m=>({_id:m.user?._id,name:m.user?.name}))||[]}/>)}
+        {selectedTask&&(<TaskDetailModal task={selectedTask} onClose={()=>dispatch(setSelectedTask(null))} onAddComment={async(taskId,text,mentions)=>{const r=await dispatch(addComment({taskId,text,mentions}));if(r.type==='tasks/addComment/fulfilled')toast.success('Comment added');else toast.error(r.payload||'Failed to add comment');}} workspaceMembers={currentWorkspace?.members?.map(m=>({_id:m.user?._id,name:m.user?.name}))||[]}/>)}
       </Suspense>
     </div>
   );

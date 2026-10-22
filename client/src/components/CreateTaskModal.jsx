@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { createTask } from "../redux/slices/taskSlice";
-import { useSocket } from "../hooks/Usesocket";
 import toast from "react-hot-toast";
 import {
   X, Plus, Calendar, Tag, User, Flame, AlertCircle,
@@ -60,7 +59,6 @@ export default function CreateTaskModal({ initialStatus = "todo", initialDueDate
   const T = useThemeColors();
   const dispatch = useDispatch();
   const { currentWorkspace } = useSelector((s) => s.workspace);
-  const { socket } = useSocket();
 
   const [isLoading, setIsLoading] = useState(false);
   const [tagInput, setTagInput]   = useState("");
@@ -94,7 +92,6 @@ export default function CreateTaskModal({ initialStatus = "todo", initialDueDate
     const result = await dispatch(createTask(taskData));
     setIsLoading(false);
     if (result.type === "tasks/create/fulfilled") {
-      if (socket) socket.emit("task:create", { workspaceId: currentWorkspace._id, task: result.payload });
       toast.success("Task created!");
       setTimeout(onClose, 300);
     } else {

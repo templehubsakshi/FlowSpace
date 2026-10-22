@@ -18,6 +18,9 @@ exports.loadTask = async (req, res, next) => {
     req.params.workspaceId = task.workspace.toString();
     next();
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    // FIX: a malformed id (e.g. /api/tasks/abc) is a client error, not a 500.
+    if (error.name === 'CastError') return res.status(404).json({ message: 'Task not found' });
+    console.error('loadTask error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };

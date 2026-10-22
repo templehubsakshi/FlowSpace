@@ -104,9 +104,17 @@ export default function WorkspaceSettingsModal({ onClose }) {
     const a    = Object.assign(document.createElement('a'),{ href:url, download:`${currentWorkspace.name.replace(/\s+/g,'_')}_export.json` });
     a.click(); URL.revokeObjectURL(url); toast.success('Exported as JSON');
   };
+  // FIX: (1) every field is quoted — an assignee name containing a comma used to
+  // shift all following columns; (2) values starting with = + - @ are prefixed
+  // with ' so Excel/Sheets don't execute a task title like =HYPERLINK(...) (CSV injection).
+  const csvCell = (v) => {
+    let s = String(v ?? '');
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return `"${s.replace(/"/g, '""')}"`;
+  };
   const exportCSV = () => {
     const headers = ['Title','Description','Status','Priority','Assignee','Due Date','Tags','Created At'];
-    const rows = tasks.map(t => [`"${(t.title??'').replace(/"/g,'""')}"`,`"${(t.description??'').replace(/"/g,'""')}"`,t.status??'',t.priority??'',t.assignee?.name??'',t.dueDate?new Date(t.dueDate).toLocaleDateString():'',`"${(t.tags??[]).join(', ')}"`,t.createdAt?new Date(t.createdAt).toLocaleDateString():'']).map(r=>r.join(','));
+    const rows = tasks.map(t => [t.title,t.description,t.status,t.priority,t.assignee?.name,t.dueDate?new Date(t.dueDate).toLocaleDateString():'',(t.tags??[]).join(', '),t.createdAt?new Date(t.createdAt).toLocaleDateString():''].map(csvCell).join(','));
     const csv  = [headers.join(','),...rows].join('\n');
     const blob = new Blob([csv],{type:'text/csv'});
     const url  = URL.createObjectURL(blob);

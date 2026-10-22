@@ -36,7 +36,7 @@ function AppLoadingSpinner() {
 
 function App() {
   const dispatch = useDispatch();
-  const { isAuthenticated, isLoading } = useSelector(state => state.auth);
+  const { isAuthenticated, isCheckingAuth } = useSelector(state => state.auth);
 
   // Always verify session with backend on every app load
   useEffect(() => {
@@ -56,7 +56,9 @@ function App() {
   // This let anyone with a 'user' key in localStorage (even a deleted account
   // or a manually pasted value) see the dashboard while checkAuth was pending.
   // Now we show a spinner for the brief checkAuth window instead.
-  if (isLoading) {
+  // Only the initial session check blocks the UI (login/signup submits no longer
+  // unmount the whole app — see authSlice).
+  if (isCheckingAuth) {
     return <AppLoadingSpinner />;
   }
 

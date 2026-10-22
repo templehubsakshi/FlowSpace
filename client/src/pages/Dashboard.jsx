@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../redux/slices/authSlice";
 import { fetchWorkspaces } from "../redux/slices/workspaceSlice";
+import { fetchTasks, clearTasks } from "../redux/slices/taskSlice";
 import toast from "react-hot-toast";
 import useNotificationSocket from "../hooks/useNotificationSocket";
 import { useWorkspaceSocket } from "../hooks/useWorkspaceSocket";
@@ -73,6 +74,15 @@ export default function Dashboard() {
   useNotificationSocket();
 
   useEffect(() => { dispatch(fetchWorkspaces()); }, [dispatch]);
+
+  // Load the board for the selected workspace — keyed by the workspace ID only.
+  // Old tasks/selectedTask are cleared first so you never see (or open) another
+  // workspace's tasks while the new ones load.
+  const currentWorkspaceId = currentWorkspace?._id;
+  useEffect(() => {
+    dispatch(clearTasks());
+    if (currentWorkspaceId) dispatch(fetchTasks(currentWorkspaceId));
+  }, [currentWorkspaceId, dispatch]);
 
   // ✅ FIX: setState in effect — this is valid, condition prevents infinite loop
   useEffect(() => {

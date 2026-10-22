@@ -1,43 +1,46 @@
-const mongoose= require('mongoose');
+const mongoose = require('mongoose');
 
-const workspaceSchema=new mongoose.Schema({
-    name:{
-        type:String,
-        require:true,
-        trim:true,
-        maxlength:50
+const workspaceSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    // FIX: was `require: true` (typo) — Mongoose ignored it, so the DB layer
+    // never enforced a workspace name.
+    required: true,
+    trim: true,
+    maxlength: 50,
+  },
+  description: {
+    type: String,
+    maxlength: 200,
+  },
+  owner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  members: [{
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
     },
-    description:{
-        type:String,
-        maxlength:200
+    role: {
+      type: String,
+      enum: ['owner', 'admin', 'member'],
+      default: 'member',
     },
-    owner:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:'User',
-        required:true
+    joinedAt: {
+      type: Date,
+      default: Date.now,
     },
-    members:[{
-        user:{
-            type:mongoose.Schema.Types.ObjectId,
-            ref:'User',
-            required:true
-        },
-        role:{
-            type:String,
-            enum:['owner','admin','member'],
-            default:'member'
-        },
-        joinedAt:{
-            type:Date,
-            default:Date.now
-        }
-    }],
-    createdAt:{
-        type:Date,
-        default:Date.now
-    }
-})
-workspaceSchema.index({owner:1});
-workspaceSchema.index({'members.user':1});
+  }],
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
 
-module.exports=mongoose.model('Workspace',workspaceSchema);
+workspaceSchema.index({ owner: 1 });
+workspaceSchema.index({ 'members.user': 1 });
+
+module.exports = mongoose.model('Workspace', workspaceSchema);

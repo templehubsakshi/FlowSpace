@@ -3,10 +3,26 @@ import api from '../../services/api';
 
 // No localStorage for token — cookie handles auth.
 // Only user object (non-sensitive) is cached for UI speed.
+// FIX: a corrupt/hand-edited 'user' value in localStorage made JSON.parse throw
+// at import time and white-screened the whole app (before any ErrorBoundary).
+const readCachedUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('user')) || null;
+  } catch {
+    localStorage.removeItem('user');
+    return null;
+  }
+};
+
 const initialState = {
-  user: JSON.parse(localStorage.getItem('user')) || null,
+  user: readCachedUser(),
   isAuthenticated: false, // Never trust localStorage for auth status
-  isLoading: true,        // Start true so App.jsx waits for checkAuth
+  // FIX: App.jsx used `isLoading` for its full-screen spinner. Login/Signup also
+  // set isLoading=true while submitting, so the WHOLE app (including the form)
+  // unmounted during every login attempt — a failed login wiped the form.
+  // `isCheckingAuth` is only the initial session check; `isLoading` is for forms.
+  isCheckingAuth: true,
+  isLoading: false,
   error: null
 };
 
@@ -75,6 +91,7 @@ const authSlice = createSlice({
     forceLogout: (state) => {
       state.isAuthenticated = false;
       state.user = null;
+      state.isCheckingAuth = false;
       state.isLoading = false;
       localStorage.removeItem('user');
       localStorage.removeItem('currentWorkspaceId');
@@ -119,15 +136,17 @@ const authSlice = createSlice({
     // ── Check Auth ──────────────────────────────────────
     builder
       .addCase(checkAuth.pending, (state) => {
-        state.isLoading = true;
+        state.isCheckingAuth = true;
       })
       .addCase(checkAuth.fulfilled, (state, action) => {
+        state.isCheckingAuth = false;
         state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
         localStorage.setItem('user', JSON.stringify(action.payload.user));
       })
       .addCase(checkAuth.rejected, (state) => {
+        state.isCheckingAuth = false;
         state.isLoading = false;
         state.isAuthenticated = false;
         state.user = null;

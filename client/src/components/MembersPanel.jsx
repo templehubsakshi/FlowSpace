@@ -200,7 +200,7 @@ export default function MembersPanel(){
                         </select>
                       )
                     )}
-                    {isAdminOrOwner&&!isThisOwner&&!isMe&&(
+                    {isAdminOrOwner&&!isThisOwner&&!isMe&&(isOwner||member.role!=="admin")&&(
                       <button onClick={()=>handleRemove(member.user._id)} disabled={isRemoving}
                         style={{width:34,height:34,borderRadius:10,flexShrink:0,border:`1px solid ${T.border}`,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:isRemoving?"not-allowed":"pointer",opacity:isRemoving?0.5:1,transition:"all 0.15s"}}
                         onMouseEnter={e=>{e.currentTarget.style.background="rgba(220,38,38,0.10)";e.currentTarget.style.borderColor="rgba(220,38,38,0.35)"}}

@@ -1,6 +1,6 @@
 const Notification = require('../models/Notification');
-const { getIO } = require('../config/socket');
-const { getOnlineUsers } = require('../sockets/workspaceSocket');
+const { emitToUser } = require('../utils/realtime');
+const { isObjectId } = require('../utils/validators');
 
 const getMessage = (notification) => {
   const senderName = notification.sender?.name || 'Someone';
@@ -64,19 +64,14 @@ exports.createNotification = async ({
       workspace: notification.workspace,
     };
 
-    // Emit to every open socket the recipient has (multi-tab/multi-device)
+    // Every open socket of the recipient (all tabs/devices) is in their
+    // `user:<id>` room, so no in-memory userId→socketIds map is needed (it did
+    // not work across multiple server instances).
     try {
-      const io = getIO();
-      const onlineUsers = getOnlineUsers();
-      const recipientSockets = onlineUsers.get(recipient.toString());
-
-      if (recipientSockets && recipientSockets.size > 0) {
-        io.to([...recipientSockets]).emit('notification:new', payload);
-        console.log(`✅ Notification sent to user ${recipient} (${recipientSockets.size} device(s))`);
-      }
+      emitToUser(recipient, 'notification:new', payload);
     } catch (socketError) {
       console.error('Socket emission error:', socketError);
-      // Don't fail the entire operation if socket fails
+      // Don't fail the whole operation if the socket layer fails
     }
 
     return notification;
@@ -89,17 +84,26 @@ exports.createNotification = async ({
 // GET notifications
 exports.getNotifications = async (req, res) => {
   try {
-    const { page = 1, limit = 20, workspace } = req.query;
+    // FIX: page/limit were used unvalidated — ?limit=10000000 dumped the whole
+    // collection, and a non-numeric value produced NaN queries.
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
+    const { workspace } = req.query;
 
     const filter = { recipient: req.userId };
-    if (workspace) filter.workspace = workspace;
+    if (workspace !== undefined) {
+      if (!isObjectId(workspace)) {
+        return res.status(400).json({ success: false, message: 'Invalid workspace id' });
+      }
+      filter.workspace = workspace;
+    }
 
     const notifications = await Notification.find(filter)
       .populate('sender', 'name')
       .populate('task', 'title')
       .sort({ createdAt: -1 })
-      .skip((page - 1) * Number(limit))
-      .limit(Number(limit));
+      .skip((page - 1) * limit)
+      .limit(limit);
 
     const result = notifications.map((n) => ({
       _id: n._id,
@@ -114,6 +118,7 @@ exports.getNotifications = async (req, res) => {
 
     res.json({ success: true, data: result });
   } catch (error) {
+    console.error('getNotifications error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch notifications' });
   }
 };
@@ -127,6 +132,7 @@ exports.getUnreadCount = async (req, res) => {
     });
     res.json({ success: true, count });
   } catch (error) {
+    console.error('getUnreadCount error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch unread count' });
   }
 };
@@ -134,6 +140,10 @@ exports.getUnreadCount = async (req, res) => {
 // MARK single notification as read
 exports.markAsRead = async (req, res) => {
   try {
+    if (!isObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: 'Notification not found' });
+    }
+
     const notification = await Notification.findOneAndUpdate(
       { _id: req.params.id, recipient: req.userId },
       { isRead: true },
@@ -146,30 +156,45 @@ exports.markAsRead = async (req, res) => {
 
     res.json({ success: true, data: { _id: notification._id, isRead: true } });
   } catch (error) {
+    console.error('markAsRead error:', error);
     res.status(500).json({ success: false, message: 'Failed to mark notification as read' });
   }
+};
+
+// Optional workspace filter from the body. FIX: Express 5 leaves req.body
+// undefined on body-less requests (e.g. DELETE /notifications), so the old
+// `req.body.workspace` threw and "Clear all" always returned 500.
+const workspaceFromBody = (req) => {
+  const ws = req.body?.workspace;
+  return ws === undefined || ws === null || ws === '' ? null : ws;
 };
 
 // MARK all as read
 exports.markAllAsRead = async (req, res) => {
   try {
     const filter = { recipient: req.userId, isRead: false };
-    if (req.body.workspace) filter.workspace = req.body.workspace;
+    const ws = workspaceFromBody(req);
+    if (ws) {
+      if (!isObjectId(ws)) return res.status(400).json({ success: false, message: 'Invalid workspace id' });
+      filter.workspace = ws;
+    }
 
     await Notification.updateMany(filter, { isRead: true });
 
     res.json({ success: true, message: 'All notifications marked as read' });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to mark all notifications as read',
-    });
+    console.error('markAllAsRead error:', error);
+    res.status(500).json({ success: false, message: 'Failed to mark all notifications as read' });
   }
 };
 
 // DELETE single notification
 exports.deleteNotification = async (req, res) => {
   try {
+    if (!isObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: 'Notification not found' });
+    }
+
     const deleted = await Notification.findOneAndDelete({
       _id: req.params.id,
       recipient: req.userId,
@@ -181,6 +206,7 @@ exports.deleteNotification = async (req, res) => {
 
     res.json({ success: true, message: 'Notification deleted successfully' });
   } catch (error) {
+    console.error('deleteNotification error:', error);
     res.status(500).json({ success: false, message: 'Failed to delete notification' });
   }
 };
@@ -189,12 +215,17 @@ exports.deleteNotification = async (req, res) => {
 exports.clearAllNotifications = async (req, res) => {
   try {
     const filter = { recipient: req.userId };
-    if (req.body.workspace) filter.workspace = req.body.workspace;
+    const ws = workspaceFromBody(req);
+    if (ws) {
+      if (!isObjectId(ws)) return res.status(400).json({ success: false, message: 'Invalid workspace id' });
+      filter.workspace = ws;
+    }
 
     await Notification.deleteMany(filter);
 
     res.json({ success: true, message: 'All notifications cleared successfully' });
   } catch (error) {
+    console.error('clearAllNotifications error:', error);
     res.status(500).json({ success: false, message: 'Failed to clear notifications' });
   }
 };

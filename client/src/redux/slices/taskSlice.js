@@ -8,13 +8,19 @@ const initialState = {
     done: [],
   },
   selectedTask: null,
+  // Workspace whose tasks we are currently loading/showing. Used to drop late
+  // responses of a previous workspace (fast A→B switch: A's slower response
+  // used to overwrite B's board).
+  activeWorkspaceId: null,
   isLoading: false,
   error: null,
 };
 
 const normalizeTasksPayload = (tasks = {}) => ({
   todo: tasks.todo || [],
-  'in-progress': tasks['in-progress'] || tasks.in-progress || [],
+  // FIX: `tasks.in-progress` is the EXPRESSION `tasks.in - progress` (ReferenceError:
+  // progress is not defined) whenever tasks['in-progress'] was falsy.
+  'in-progress': tasks['in-progress'] || [],
   done: tasks.done || [],
 });
 
@@ -27,6 +33,18 @@ const ensureStatusBucket = (state, status) => {
 const removeTaskFromAllColumns = (state, taskId) => {
   Object.keys(state.tasks).forEach((status) => {
     state.tasks[status] = state.tasks[status].filter((task) => task._id !== taskId);
+  });
+};
+
+const removeCommentFromState = (state, { taskId, commentId }) => {
+  if (state.selectedTask?._id === taskId && state.selectedTask.comments) {
+    state.selectedTask.comments = state.selectedTask.comments.filter((c) => c._id !== commentId);
+  }
+  Object.keys(state.tasks).forEach((status) => {
+    const idx = state.tasks[status].findIndex((t) => t._id === taskId);
+    if (idx !== -1 && state.tasks[status][idx].comments) {
+      state.tasks[status][idx].comments = state.tasks[status][idx].comments.filter((c) => c._id !== commentId);
+    }
   });
 };
 
@@ -143,6 +161,12 @@ const taskSlice = createSlice({
       state.error = null;
     },
 
+    clearTasks: (state) => {
+      state.tasks = { todo: [], 'in-progress': [], done: [] };
+      state.selectedTask = null;
+      state.activeWorkspaceId = null;
+    },
+
     addTaskFromSocket: (state, action) => {
       const task = action.payload;
       ensureStatusBucket(state, task.status);
@@ -152,46 +176,15 @@ const taskSlice = createSlice({
         removeTaskFromAllColumns(state, task._id);
       }
 
-      state.tasks[task.status].unshift(task);
+      // New tasks are appended server-side (order = last), so append here too —
+      // unshift() showed them at the top until the next refresh.
+      state.tasks[task.status].push(task);
     },
 
+    // Full task object from the server (`task:updated`). A status change via the
+    // edit form is placed at the END of the destination column (same as server).
     updateTaskFromSocket: (state, action) => {
-      const incoming = action.payload;
-      const isPartialMove = incoming._partialMove === true;
-
-      if (isPartialMove) {
-        const taskId = incoming._id;
-        const newStatus = incoming.status;
-
-        const found = findTaskWithStatus(state, taskId);
-        if (!found) return;
-
-        ensureStatusBucket(state, newStatus);
-
-        if (found.status === newStatus) {
-          state.tasks[newStatus][found.index] = {
-            ...state.tasks[newStatus][found.index],
-            status: newStatus,
-          };
-        } else {
-          state.tasks[found.status].splice(found.index, 1);
-          state.tasks[newStatus].unshift({
-            ...found.task,
-            status: newStatus,
-          });
-        }
-
-        if (state.selectedTask?._id === taskId) {
-          state.selectedTask = {
-            ...state.selectedTask,
-            status: newStatus,
-          };
-        }
-
-        return;
-      }
-
-      const updatedTask = incoming;
+      const updatedTask = action.payload;
       const found = findTaskWithStatus(state, updatedTask._id);
 
       ensureStatusBucket(state, updatedTask.status);
@@ -199,16 +192,36 @@ const taskSlice = createSlice({
       if (found) {
         if (found.status !== updatedTask.status) {
           state.tasks[found.status].splice(found.index, 1);
-          state.tasks[updatedTask.status].unshift(updatedTask);
+          state.tasks[updatedTask.status].push(updatedTask);
         } else {
           state.tasks[found.status][found.index] = updatedTask;
         }
       } else {
-        state.tasks[updatedTask.status].unshift(updatedTask);
+        state.tasks[updatedTask.status].push(updatedTask);
       }
 
       if (state.selectedTask?._id === updatedTask._id) {
         state.selectedTask = updatedTask;
+      }
+    },
+
+    // `task:moved` from another user. FIX: the old handler only patched `status`
+    // and put the card at the TOP of the column (it had no order), so remote
+    // boards disagreed with the DB until refresh. The server now sends the full
+    // task plus the target index.
+    moveTaskFromSocket: (state, action) => {
+      const { task, newOrder } = action.payload;
+      removeTaskFromAllColumns(state, task._id);
+      ensureStatusBucket(state, task.status);
+
+      const column = state.tasks[task.status];
+      const index = Number.isInteger(newOrder)
+        ? Math.min(Math.max(newOrder, 0), column.length)
+        : column.length;
+      column.splice(index, 0, task);
+
+      if (state.selectedTask?._id === task._id) {
+        state.selectedTask = task;
       }
     },
 
@@ -247,6 +260,10 @@ const taskSlice = createSlice({
           }
         }
       });
+    },
+
+    deleteCommentFromSocket: (state, action) => {
+      removeCommentFromState(state, action.payload);
     },
 
     optimisticMoveTask: (state, action) => {
@@ -306,15 +323,19 @@ const taskSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // fetchTasks
-      .addCase(fetchTasks.pending, (state) => {
+      .addCase(fetchTasks.pending, (state, action) => {
         state.isLoading = true;
         state.error = null;
+        state.activeWorkspaceId = action.meta.arg;
       })
       .addCase(fetchTasks.fulfilled, (state, action) => {
+        // Ignore a late response for a workspace we have already switched away from
+        if (state.activeWorkspaceId !== null && action.meta.arg !== state.activeWorkspaceId) return;
         state.isLoading = false;
         state.tasks = normalizeTasksPayload(action.payload);
       })
       .addCase(fetchTasks.rejected, (state, action) => {
+        if (state.activeWorkspaceId !== null && action.meta.arg !== state.activeWorkspaceId) return;
         state.isLoading = false;
         state.error = action.payload;
       })
@@ -329,7 +350,11 @@ const taskSlice = createSlice({
         const task = action.payload;
 
         ensureStatusBucket(state, task.status);
-        state.tasks[task.status].unshift(task);
+        // Dedupe (a live `task:created` may already have added it) and append:
+        // the server stores new tasks at the END of the column, so unshift()
+        // made the card jump from top to bottom after a refresh.
+        removeTaskFromAllColumns(state, task._id);
+        state.tasks[task.status].push(task);
       })
       .addCase(createTask.rejected, (state, action) => {
         state.isLoading = false;
@@ -346,12 +371,12 @@ const taskSlice = createSlice({
         if (found) {
           if (found.status !== updatedTask.status) {
             state.tasks[found.status].splice(found.index, 1);
-            state.tasks[updatedTask.status].unshift(updatedTask);
+            state.tasks[updatedTask.status].push(updatedTask);
           } else {
             state.tasks[found.status][found.index] = updatedTask;
           }
         } else {
-          state.tasks[updatedTask.status].unshift(updatedTask);
+          state.tasks[updatedTask.status].push(updatedTask);
         }
 
         if (state.selectedTask?._id === updatedTask._id) {
@@ -438,23 +463,7 @@ const taskSlice = createSlice({
 
       // deleteComment
       .addCase(deleteComment.fulfilled, (state, action) => {
-        const { taskId, commentId } = action.payload;
-
-        if (state.selectedTask?._id === taskId && state.selectedTask.comments) {
-          state.selectedTask.comments = state.selectedTask.comments.filter(
-            (comment) => comment._id !== commentId
-          );
-        }
-
-        Object.keys(state.tasks).forEach((status) => {
-          const taskIndex = state.tasks[status].findIndex((task) => task._id === taskId);
-          if (taskIndex !== -1 && state.tasks[status][taskIndex].comments) {
-            state.tasks[status][taskIndex].comments =
-              state.tasks[status][taskIndex].comments.filter(
-                (comment) => comment._id !== commentId
-              );
-          }
-        });
+        removeCommentFromState(state, action.payload);
       })
       .addCase(deleteComment.rejected, (state, action) => {
         state.error = action.payload;
@@ -465,12 +474,15 @@ const taskSlice = createSlice({
 export const {
   setSelectedTask,
   clearError,
+  clearTasks,
   optimisticMoveTask,
   rollbackMoveTask,
   addTaskFromSocket,
   updateTaskFromSocket,
+  moveTaskFromSocket,
   deleteTaskFromSocket,
   addCommentFromSocket,
+  deleteCommentFromSocket,
 } = taskSlice.actions;
 
 export default taskSlice.reducer;

@@ -85,6 +85,8 @@ attachments: [{
 
 // Indexes for performance
 taskSchema.index({ workspace: 1, status: 1 });
+// board queries + move/reorder updates sort/filter by (workspace, status, order)
+taskSchema.index({ workspace: 1, status: 1, order: 1 });
 taskSchema.index({ workspace: 1, assignee: 1 });
 taskSchema.index({ workspace: 1, createdAt: -1 });
 

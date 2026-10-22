@@ -3,6 +3,7 @@ import { createContext, useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
+import { setSocketId } from '../utils/socketId';
 
 export const SocketContext = createContext();
 
@@ -12,50 +13,64 @@ export function SocketProvider({ children }) {
   const [onlineUsers, setOnlineUsers] = useState([]);
   const socketRef = useRef(null);
 
-  // ✅ Only depends on isAuthenticated — connect when logged in, disconnect when logged out
+  // Connect when logged in, disconnect when logged out
   const { isAuthenticated } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    // Don't connect if not authenticated
     if (!isAuthenticated) {
-      // If a socket already exists (e.g. after logout), disconnect it
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSocket(null);
         setIsConnected(false);
+        setOnlineUsers([]);
+        setSocketId(null);
       }
       return;
     }
 
-    // ✅ withCredentials: true → browser sends httpOnly cookie automatically
-    // No token in auth: {} needed — cookie handles authentication on backend
+    // withCredentials: true → browser sends the httpOnly cookie with the handshake
     const newSocket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
-      withCredentials: true,   // ✅ Sends cookie with the handshake request
+      withCredentials: true,
       reconnection: true,
-      reconnectionAttempts: 5,
+      // FIX: was 5 attempts — after ~5 failures (e.g. laptop asleep / short
+      // outage) the client gave up for good and live updates died silently
+      // until a manual page refresh. Keep retrying (with capped back-off).
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
     });
 
     socketRef.current = newSocket;
 
+    let hasConnectedBefore = false;
     newSocket.on('connect', () => {
       setIsConnected(true);
-      toast.success('Connected — live updates active', { duration: 2000, icon: '🟢' });
+      setSocketId(newSocket.id);
+      // Only toast on a RE-connect; the very first connect on every page load
+      // doesn't need a toast.
+      if (hasConnectedBefore) {
+        toast.success('Reconnected — live updates active', { id: 'socket-status', duration: 2000, icon: '🟢' });
+      }
+      hasConnectedBefore = true;
     });
 
-    newSocket.on('disconnect', () => {
+    newSocket.on('disconnect', (reason) => {
       setIsConnected(false);
-      toast.error('Connection lost — reconnecting…', { duration: 2000, icon: '🔴' });
+      setSocketId(null);
+      // "io client disconnect" = we closed it ourselves (logout/unmount)
+      if (reason !== 'io client disconnect') {
+        toast.error('Connection lost — reconnecting…', { id: 'socket-status', duration: 2000, icon: '🔴' });
+      }
     });
 
     newSocket.on('connect_error', (err) => {
       console.error('Socket connect error:', err.message);
-      toast.error('Connection error', { duration: 2000 });
     });
 
     newSocket.on('error', (error) => {
-      toast.error(error.message || 'Socket error occurred');
+      toast.error(error?.message || 'Socket error occurred');
     });
 
     setSocket(newSocket);
@@ -63,8 +78,9 @@ export function SocketProvider({ children }) {
     return () => {
       newSocket.disconnect();
       socketRef.current = null;
+      setSocketId(null);
     };
-  }, [isAuthenticated]); // ✅ Re-runs on login/logout — no token dependency
+  }, [isAuthenticated]);
 
   return (
     <SocketContext.Provider value={{ socket, isConnected, onlineUsers, setOnlineUsers }}>

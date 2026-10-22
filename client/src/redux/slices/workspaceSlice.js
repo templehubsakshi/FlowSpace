@@ -152,12 +152,24 @@ const workspaceSlice = createSlice({
                 state.isLoading = false;
                 state.workspaces = action.payload;
 
-                if (action.payload.length > 0 && !state.currentWorkspace) {
+                // FIX: currentWorkspace was only chosen when it was empty. If the
+                // user was removed from it / it was deleted, the dashboard kept
+                // showing a workspace they can no longer access (every request
+                // 403s). Now: refresh it from the list, or fall back to another.
+                const current = state.currentWorkspace
+                    ? action.payload.find(w => w._id === state.currentWorkspace._id)
+                    : null;
+
+                if (current) {
+                    state.currentWorkspace = current;
+                } else if (action.payload.length > 0) {
                     const saveId = localStorage.getItem('currentWorkspaceId');
-                    const workspace = saveId
-                        ? action.payload.find(w => w._id === saveId)
-                        : action.payload[0];
+                    const workspace = saveId ? action.payload.find(w => w._id === saveId) : null;
                     state.currentWorkspace = workspace || action.payload[0];
+                    localStorage.setItem('currentWorkspaceId', state.currentWorkspace._id);
+                } else {
+                    state.currentWorkspace = null;
+                    localStorage.removeItem('currentWorkspaceId');
                 }
             })
             .addCase(fetchWorkspaces.rejected, (state, action) => {

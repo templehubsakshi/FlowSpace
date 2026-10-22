@@ -1,19 +1,34 @@
 const express = require('express');
 const request = require('supertest');
-const { authLimiter } = require('../src/middelware/rateLimiter');
+
+// Fresh limiter (fresh in-memory counters) for every test.
+const freshLimiter = () => {
+  let limiter;
+  jest.isolateModules(() => { limiter = require('../src/middelware/rateLimiter').authLimiter; });
+  return limiter;
+};
 
 describe('authLimiter', () => {
-  test('allows requests under the limit and blocks once exceeded', async () => {
+  test('blocks after 10 FAILED attempts', async () => {
     const app = express();
-    app.post('/login', authLimiter, (req, res) => res.json({ ok: true }));
+    app.post('/login', freshLimiter(), (req, res) => res.status(401).json({ ok: false }));
 
     let lastStatus;
     for (let i = 0; i < 11; i++) {
       const res = await request(app).post('/login');
       lastStatus = res.status;
-      if (i < 10) expect(res.status).toBe(200);
+      if (i < 10) expect(res.status).toBe(401);
     }
-    // The 11th request within the window should be rate-limited.
     expect(lastStatus).toBe(429);
+  });
+
+  test('successful logins do not count towards the limit', async () => {
+    const app = express();
+    app.post('/login', freshLimiter(), (req, res) => res.json({ ok: true }));
+
+    for (let i = 0; i < 15; i++) {
+      const res = await request(app).post('/login');
+      expect(res.status).toBe(200);
+    }
   });
 });

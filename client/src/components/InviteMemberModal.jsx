@@ -33,6 +33,9 @@ function getAvatarColor(email) {
 export default function InviteMemberModal({ onClose }) {
   const dispatch = useDispatch();
   const { currentWorkspace } = useSelector((s) => s.workspace);
+  const me = useSelector((s) => s.auth.user);
+  // Server rule: only the workspace owner can invite admins.
+  const isOwner = (currentWorkspace?.owner?._id || currentWorkspace?.owner) === (me?.id || me?._id);
 
   const [email, setEmail]           = useState('');
   const [role, setRole]             = useState('member');
@@ -390,7 +393,7 @@ export default function InviteMemberModal({ onClose }) {
                     {[
                       { key:'member', icon:<Eye style={{width:14,height:14}}/>,    label:'Member', desc:'Can view and edit tasks',        accent:'#818cf8' },
                       { key:'admin',  icon:<Shield style={{width:14,height:14}}/>, label:'Admin',  desc:'Can manage members & settings', accent:'#a78bfa' },
-                    ].map(({ key, icon, label, desc, accent }) => (
+                    ].filter(({ key }) => isOwner || key !== 'admin').map(({ key, icon, label, desc, accent }) => (
                       <button
                         key={key}
                         type="button"
